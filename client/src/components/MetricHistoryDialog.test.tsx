@@ -1,0 +1,24 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { MetricHistoryTable } from "./MetricHistoryDialog";
+
+describe("MetricHistoryTable", () => {
+  it("renders imported historical and recent measurements together", () => {
+    const markup = renderToStaticMarkup(
+      <MetricHistoryTable
+        unit="g/dL"
+        history={[
+          { examDate: "2022-02-01", value: "10.1", status: "follow_up" },
+          { examDate: "2022-04-05", value: "12.1", status: "reassuring" },
+          { examDate: "2026-05-31", value: "11.1", status: "follow_up" },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain("2022-02-01");
+    expect(markup).toContain("2022-04-05");
+    expect(markup).toContain("2026-05-31");
+    expect(markup).toContain("الأحدث");
+  });
+});

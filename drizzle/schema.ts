@@ -1,0 +1,78 @@
+import { decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+
+/**
+ * Core user table backing auth flow.
+ * Extend this file with additional tables as your product grows.
+ * Columns use camelCase to match both database fields and generated types.
+ */
+export const users = mysqlTable("users", {
+  /**
+   * Surrogate primary key. Auto-incremented numeric value managed by the database.
+   * Use this for relations between tables.
+   */
+  id: int("id").autoincrement().primaryKey(),
+  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+/** Medical events are intentionally date-first, so the public timeline never relies on upload time. */
+export const medicalVisits = mysqlTable("medicalVisits", {
+  id: int("id").autoincrement().primaryKey(),
+  visitNumber: varchar("visitNumber", { length: 32 }).notNull().unique(),
+  examDate: varchar("examDate", { length: 10 }).notNull(),
+  reportDate: varchar("reportDate", { length: 10 }),
+  reportType: varchar("reportType", { length: 64 }).notNull().default("تحاليل مختبرية"),
+  department: varchar("department", { length: 128 }),
+  physician: varchar("physician", { length: 128 }),
+  facility: varchar("facility", { length: 160 }),
+  source: varchar("source", { length: 128 }),
+  testCount: int("testCount").notNull().default(0),
+  abnormalCount: int("abnormalCount").notNull().default(0),
+  summary: text("summary"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [index("medicalVisits_examDate_idx").on(table.examDate)]);
+
+/** Numeric values are saved where possible, while valueText preserves the original report wording. */
+export const medicalResults = mysqlTable("medicalResults", {
+  id: int("id").autoincrement().primaryKey(),
+  visitId: int("visitId").notNull().references(() => medicalVisits.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 80 }).notNull(),
+  label: varchar("label", { length: 160 }).notNull(),
+  category: varchar("category", { length: 80 }).notNull(),
+  numericValue: decimal("numericValue", { precision: 12, scale: 3 }),
+  valueText: varchar("valueText", { length: 80 }).notNull(),
+  unit: varchar("unit", { length: 32 }),
+  referenceRange: varchar("referenceRange", { length: 80 }),
+  status: mysqlEnum("status", ["reassuring", "follow_up", "unavailable"]).notNull().default("unavailable"),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("medicalResults_visit_idx").on(table.visitId),
+  index("medicalResults_code_idx").on(table.code),
+  uniqueIndex("medicalResults_visit_code_idx").on(table.visitId, table.code),
+]);
+
+/** Original file references are kept private by the server and never returned in the public dashboard. */
+export const medicalDocuments = mysqlTable("medicalDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  visitId: int("visitId").notNull().references(() => medicalVisits.id, { onDelete: "cascade" }),
+  originalName: varchar("originalName", { length: 255 }).notNull(),
+  storageKey: varchar("storageKey", { length: 512 }).notNull(),
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("medicalDocuments_visit_idx").on(table.visitId)]);
+
+export type MedicalVisit = typeof medicalVisits.$inferSelect;
+export type MedicalResult = typeof medicalResults.$inferSelect;
+export type MedicalDocument = typeof medicalDocuments.$inferSelect;
