@@ -30,9 +30,12 @@ async function startServer() {
   }
 
   const port = parseInt(process.env.PORT || "8080", 10);
+  const portSource = process.env.PORT ? "process.env.PORT" : "fallback default";
 
   server.listen(port, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${port}/`);
+    console.log(
+      `Server running on http://0.0.0.0:${port}/ (port source: ${portSource})`
+    );
   });
 }
 
