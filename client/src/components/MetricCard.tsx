@@ -3,8 +3,10 @@ import { type MedicalStatus } from "@shared/medical";
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, Minus } from "lucide-react";
 import { CheckCircle2, CircleAlert, Info } from "lucide-react";
 import { type TrendInterpretation } from "@shared/medical";
+import { getTestInfo } from "@shared/testInfo";
 
 type MetricCardProps = {
+  code: string;
   label: string;
   category: string;
   value: string;
@@ -26,8 +28,9 @@ const trendStyle = {
   "بيانات غير متوفرة": { Icon: Minus, className: "bg-slate-100 text-slate-500" },
 };
 
-export function MetricCard({ label, category, value, unit, referenceRange, trend, status, examDate, lastFive, history, interpretation, onOpenHistory }: MetricCardProps) {
+export function MetricCard({ code, label, category, value, unit, referenceRange, trend, status, examDate, lastFive, history, interpretation, onOpenHistory }: MetricCardProps) {
   const { Icon, className } = trendStyle[trend];
+  const testInfo = getTestInfo(code);
   const interpretationStyle = {
     improving: { Icon: CheckCircle2, className: "border-emerald-100 bg-emerald-50 text-emerald-900" },
     worsening: { Icon: CircleAlert, className: "border-amber-100 bg-amber-50 text-amber-900" },
@@ -41,10 +44,12 @@ export function MetricCard({ label, category, value, unit, referenceRange, trend
         <div>
           <p className="text-xs font-bold text-teal-800">{category}</p>
           <h3 className="mt-1 text-base font-bold text-slate-900">{label}</h3>
+          {testInfo && <p className="mt-0.5 text-[11px] font-semibold text-slate-500" dir="ltr">{testInfo.abbr}</p>}
         </div>
         <MedicalStatusBadge status={status} />
       </div>
-      <div className="mt-6 flex items-end justify-between gap-3">
+      {testInfo && <p className="mt-2.5 text-xs leading-5 text-slate-500">{testInfo.about}</p>}
+      <div className="mt-5 flex items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold text-slate-500">أحدث نتيجة</p>
           <p className="metric-value mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
