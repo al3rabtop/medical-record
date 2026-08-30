@@ -175,6 +175,21 @@ async function main() {
     `);
   }
 
+  // --- adminAccessLog: audit trail for admin access to other accounts
+  if (!(await tableExists(conn, "adminAccessLog"))) {
+    console.log("[migrate] Creating adminAccessLog...");
+    await conn.query(`
+      CREATE TABLE adminAccessLog (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        adminUserId INT NOT NULL,
+        targetUserId INT NOT NULL,
+        action VARCHAR(64) NOT NULL,
+        createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX adminAccessLog_target_idx (targetUserId)
+      ) DEFAULT CHARSET=utf8mb4
+    `);
+  }
+
   // --- medicalResults: abbr / about (added with the test-info feature)
   if (await tableExists(conn, "medicalResults")) {
     if (!(await columnExists(conn, "medicalResults", "abbr"))) {

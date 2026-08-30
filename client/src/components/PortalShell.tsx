@@ -1,4 +1,4 @@
-import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut, FilePlus2 } from "lucide-react";
+import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut, FilePlus2, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
@@ -22,6 +22,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const me = trpc.auth.me.useQuery();
   const patientName = me.data?.patientName ?? null;
+  const isAdmin = me.data?.role === "admin";
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f7f9f7] text-slate-900" dir="rtl">
       <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f7f9f7]/95 backdrop-blur-xl">
@@ -38,7 +39,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
           </nav>
           <div className="hidden items-center gap-2 sm:flex">
             <Link href="/upload" className="flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900"><FilePlus2 className="h-4 w-4" />رفع تقرير</Link>
-            <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
+            {isAdmin && <Link href="/admin" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="لوحة الإدارة"><Shield className="h-4 w-4" /></Link>}<button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
         <nav className="container flex gap-2 overflow-x-auto pb-3 lg:hidden" aria-label="بوابات السجل على الهاتف">
@@ -46,7 +47,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             const active = href === "/" ? location === "/" : location.startsWith(href);
             return <Link key={href} href={href} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold ${active ? "bg-teal-800 text-white" : "border border-slate-200 bg-white text-slate-600"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
           })}
-          <button onClick={handleLogout} className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"><LogOut className="h-3.5 w-3.5" />خروج</button>
+          {isAdmin && <Link href="/admin" className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"><Shield className="h-3.5 w-3.5" />الإدارة</Link>}<button onClick={handleLogout} className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"><LogOut className="h-3.5 w-3.5" />خروج</button>
         </nav>
       </header>
       <main>{children}</main>
