@@ -27,15 +27,6 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/** Records every time an admin opens another account's medical records. */
-export const adminAccessLog = mysqlTable("adminAccessLog", {
-  id: int("id").autoincrement().primaryKey(),
-  adminUserId: int("adminUserId").notNull(),
-  targetUserId: int("targetUserId").notNull(),
-  action: varchar("action", { length: 64 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => [index("adminAccessLog_target_idx").on(table.targetUserId)]);
-
 /** Medical events are intentionally date-first, so the timeline never relies on upload time. */
 export const medicalVisits = mysqlTable("medicalVisits", {
   id: int("id").autoincrement().primaryKey(),

@@ -4,7 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser } from "./medical";
 import { z } from "zod";
-import { getAdminOverview, getUserRecordsAsAdmin, getAdminAccessLog } from "./admin";
+import { getAdminOverview } from "./admin";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -21,10 +21,6 @@ export const appRouter = router({
   }),
   admin: router({
     overview: adminProcedure.query(() => getAdminOverview()),
-    accessLog: adminProcedure.query(() => getAdminAccessLog()),
-    userRecords: adminProcedure
-      .input(z.object({ userId: z.number().int().positive() }))
-      .query(({ ctx, input }) => getUserRecordsAsAdmin(ctx.user.id, input.userId)),
   }),
   medical: router({
     dashboard: protectedProcedure.query(({ ctx }) => getMedicalDashboardForUser(ctx.user.id)),
