@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport } from "./medical";
+import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser } from "./medical";
 import { z } from "zod";
 
 export const appRouter = router({
@@ -44,6 +44,9 @@ export const appRouter = router({
         })
       )
       .mutation(({ ctx, input }) => saveReviewedReport(ctx.user.id, input)),
+    deleteVisit: protectedProcedure
+      .input(z.object({ visitId: z.number().int().positive() }))
+      .mutation(({ ctx, input }) => deleteVisitForUser(ctx.user.id, input.visitId)),
   }),
 });
 

@@ -252,3 +252,25 @@ export async function saveReviewedReport(
 
   return { visitId, visitNumber, resultCount: rows.length, abnormalCount };
 }
+
+/** Deletes a visit and all of its results, but only if it belongs to this user. */
+export async function deleteVisitForUser(userId: number, visitId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const owned = await db
+    .select({ id: medicalVisits.id })
+    .from(medicalVisits)
+    .where(and(eq(medicalVisits.id, visitId), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  if (owned.length === 0) {
+    throw new Error("السجل غير موجود أو لا تملك صلاحية حذفه.");
+  }
+
+  // Results are removed explicitly so the delete works regardless of FK cascade setup.
+  await db.delete(medicalResults).where(eq(medicalResults.visitId, visitId));
+  await db.delete(medicalVisits).where(eq(medicalVisits.id, visitId));
+
+  return { deleted: true, visitId };
+}

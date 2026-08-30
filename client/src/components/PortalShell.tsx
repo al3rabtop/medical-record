@@ -46,6 +46,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             const active = href === "/" ? location === "/" : location.startsWith(href);
             return <Link key={href} href={href} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold ${active ? "bg-teal-800 text-white" : "border border-slate-200 bg-white text-slate-600"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
           })}
+          <button onClick={handleLogout} className="flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"><LogOut className="h-3.5 w-3.5" />خروج</button>
         </nav>
       </header>
       <main>{children}</main>
