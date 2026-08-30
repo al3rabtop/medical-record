@@ -41,6 +41,7 @@ export default function Upload() {
   const [facility, setFacility] = useState("");
   const [physician, setPhysician] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
+  const [truncated, setTruncated] = useState(false);
 
   const saveReport = trpc.medical.saveReport.useMutation({
     onSuccess: async () => {
@@ -74,6 +75,7 @@ export default function Upload() {
         return;
       }
 
+      setTruncated(Boolean(data.truncated));
       setExamDate(data.examDate ?? "");
       setFacility(data.facility ?? "");
       setPhysician(data.physician ?? "");
@@ -183,6 +185,12 @@ export default function Upload() {
 
         {stage === "review" && (
           <div className="flex flex-col gap-5">
+            {truncated && (
+              <div className="flex items-start gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                التقرير طويل وقد لا تكون كل الفحوصات ظاهرة أدناه. راجع القائمة، ثم ارفع بقية الصفحات في تقرير منفصل.
+              </div>
+            )}
             {lowConfidenceCount > 0 && (
               <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -321,6 +329,7 @@ export default function Upload() {
                   setStage("pick");
                   setRows([]);
                   setError(null);
+                  setTruncated(false);
                 }}
                 className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
               >

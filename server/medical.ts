@@ -147,15 +147,34 @@ export async function getMedicalDashboardForUser(userId: number) {
   };
 }
 
-/** Parses a reference range like "13–150" or "0-200" into numeric bounds. */
+/**
+ * Parses a reference range into numeric bounds.
+ * Handles "13–150", "0-200", "< 55", "> 40", "<=8.6" and Arabic decimal marks.
+ */
 function parseRange(range: string | null): { min: number; max: number } | null {
   if (!range) return null;
-  const m = range.replace(/[٫،]/g, ".").match(/(-?\d+(?:\.\d+)?)\s*[–—\-‑]\s*(-?\d+(?:\.\d+)?)/);
-  if (!m) return null;
-  const min = Number(m[1]);
-  const max = Number(m[2]);
-  if (Number.isNaN(min) || Number.isNaN(max)) return null;
-  return { min, max };
+  const norm = range.replace(/[٫،]/g, ".").replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+
+  const between = norm.match(/(-?\d+(?:\.\d+)?)\s*[–—\-‑]\s*(-?\d+(?:\.\d+)?)/);
+  if (between) {
+    const min = Number(between[1]);
+    const max = Number(between[2]);
+    if (!Number.isNaN(min) && !Number.isNaN(max)) return { min, max };
+  }
+
+  const upper = norm.match(/[<≤]\s*=?\s*(-?\d+(?:\.\d+)?)/);
+  if (upper) {
+    const max = Number(upper[1]);
+    if (!Number.isNaN(max)) return { min: -Infinity, max };
+  }
+
+  const lower = norm.match(/[>≥]\s*=?\s*(-?\d+(?:\.\d+)?)/);
+  if (lower) {
+    const min = Number(lower[1]);
+    if (!Number.isNaN(min)) return { min, max: Infinity };
+  }
+
+  return null;
 }
 
 /** Derives reassuring/follow_up by comparing the value against its reference range. */

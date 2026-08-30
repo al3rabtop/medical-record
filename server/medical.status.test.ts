@@ -24,3 +24,23 @@ describe("deriveStatus", () => {
     expect(deriveStatus(90, "غير مذكور")).toBe("unavailable");
   });
 });
+
+describe("deriveStatus with open-ended ranges", () => {
+  it("handles upper-bound-only ranges like '< 55'", () => {
+    expect(deriveStatus(9, "< 55")).toBe("reassuring");
+    expect(deriveStatus(70, "< 55")).toBe("follow_up");
+    expect(deriveStatus(0.196, "< 0.5")).toBe("reassuring");
+  });
+
+  it("handles lower-bound-only ranges like '> 40'", () => {
+    expect(deriveStatus(50, "> 40")).toBe("reassuring");
+    expect(deriveStatus(30, "> 40")).toBe("follow_up");
+  });
+
+  it("still flags out-of-range values in normal ranges from real reports", () => {
+    expect(deriveStatus(52, "10 - 50")).toBe("follow_up");
+    expect(deriveStatus(10.6, "7.4 - 10.4")).toBe("follow_up");
+    expect(deriveStatus(73.8, "75 - 250")).toBe("follow_up");
+    expect(deriveStatus(47.3, "39 - 52")).toBe("reassuring");
+  });
+});

@@ -19,14 +19,13 @@ const SYSTEM_PROMPT = `أنت مساعد لاستخراج نتائج التحا�
   "results": [
     {
       "label": "اسم الفحص بالعربية",
-      "labelOriginal": "الاسم كما ظهر في التقرير",
       "category": "التصنيف: الدم | الكلى | الكبد | الدهون | السكر | الغدة الدرقية | الفيتامينات والمعادن | الحديد والالتهاب | البول | البروتينات | تخثر الدم | الكيمياء الحيوية | أخرى",
       "value": "القيمة كما ظهرت",
       "numericValue": رقم أو null,
       "unit": "الوحدة أو null",
       "referenceRange": "المدى المرجعي أو null",
       "abbr": "الاسم العلمي/الإنجليزي المختصر للفحص كما يعرفه الأطباء، مثال: Ferritin أو Hemoglobin (Hb)",
-      "about": "شرح مبسّط بالعربية في جملة واحدة قصيرة يوضح ماذا يقيس هذا الفحص ولماذا يهم",
+      "about": "شرح مبسّط بالعربية في جملة قصيرة جداً (١٠ كلمات كحد أقصى)",
       "confidence": "high أو low"
     }
   ]
@@ -51,6 +50,42 @@ type ExtractedResult = {
   confidence: "high" | "low";
 };
 
+/** Pulls complete `results` objects out of a JSON string that was cut off mid-write. */
+function salvageResults(raw: string): ExtractedResult[] {
+  const start = raw.indexOf('"results"');
+  if (start === -1) return [];
+  const arrayStart = raw.indexOf("[", start);
+  if (arrayStart === -1) return [];
+
+  const out: ExtractedResult[] = [];
+  let depth = 0;
+  let objStart = -1;
+
+  for (let i = arrayStart; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === "{") {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0 && objStart !== -1) {
+        try {
+          out.push(JSON.parse(raw.slice(objStart, i + 1)));
+        } catch {
+          // Skip anything that still does not parse cleanly.
+        }
+        objStart = -1;
+      }
+    }
+  }
+  return out;
+}
+
+function matchField(raw: string, field: string): string | null {
+  const m = raw.match(new RegExp(`"${field}"\\s*:\\s*"([^"]*)"`));
+  return m ? m[1] : null;
+}
+
 export function registerExtractRoute(app: Express) {
   app.post("/api/reports/extract", async (req: Request, res: Response) => {
     const user = await authenticateRequest(req);
@@ -74,6 +109,15 @@ export function registerExtractRoute(app: Express) {
 
     if (!fileData || !mediaType) {
       res.status(400).json({ error: "لم يتم استلام الملف" });
+      return;
+    }
+
+    // Base64 inflates by ~33%; keep well inside the body-parser limit.
+    const approxBytes = Math.floor((fileData.length * 3) / 4);
+    if (approxBytes > 28 * 1024 * 1024) {
+      res.status(413).json({
+        error: "حجم الملف كبير جداً. جرّب تصدير التقرير بجودة أقل أو رفعه على أجزاء.",
+      });
       return;
     }
 
@@ -107,7 +151,7 @@ export function registerExtractRoute(app: Express) {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 4000,
+          max_tokens: 16000,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content }],
         }),
@@ -121,6 +165,7 @@ export function registerExtractRoute(app: Express) {
       }
 
       const data = await response.json();
+      const truncated = data.stop_reason === "max_tokens";
       const text = (data.content ?? [])
         .map((b: any) => (b.type === "text" ? b.text : ""))
         .join("")
@@ -138,9 +183,26 @@ export function registerExtractRoute(app: Express) {
       try {
         parsed = JSON.parse(cleaned);
       } catch {
-        console.error("[extract] Failed to parse model output:", cleaned.slice(0, 500));
-        res.status(502).json({ error: "تعذّر قراءة نتائج التقرير. جرّب صورة أوضح." });
-        return;
+        // A truncated response still contains complete result objects before the
+        // cut-off; recover those rather than discarding the whole extraction.
+        const salvaged = salvageResults(cleaned);
+        if (salvaged.length > 0) {
+          console.warn(`[extract] Recovered ${salvaged.length} results from truncated output.`);
+          parsed = {
+            examDate: matchField(cleaned, "examDate"),
+            facility: matchField(cleaned, "facility"),
+            physician: matchField(cleaned, "physician"),
+            results: salvaged,
+          };
+        } else {
+          console.error("[extract] Unparseable output:", cleaned.slice(0, 400));
+          res.status(502).json({
+            error: truncated
+              ? "التقرير كبير جداً وتعذّر استخراجه كاملاً. جرّب رفعه على أجزاء."
+              : "تعذّر قراءة نتائج التقرير. تأكد من وضوح الملف.",
+          });
+          return;
+        }
       }
 
       if (!Array.isArray(parsed.results) || parsed.results.length === 0) {
@@ -155,6 +217,7 @@ export function registerExtractRoute(app: Express) {
         facility: parsed.facility ?? null,
         physician: parsed.physician ?? null,
         results: parsed.results,
+        truncated,
       });
     } catch (err) {
       console.error("[extract] Unexpected error:", err);
