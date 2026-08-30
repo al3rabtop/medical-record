@@ -1,8 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
-import { getPublicMedicalDashboard, getPublicMedicalRecords } from "./medical";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { getMedicalDashboardForUser, getMedicalRecordsForUser } from "./medical";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -18,8 +18,8 @@ export const appRouter = router({
     }),
   }),
   medical: router({
-    dashboard: publicProcedure.query(() => getPublicMedicalDashboard()),
-    timeline: publicProcedure.query(() => getPublicMedicalRecords()),
+    dashboard: protectedProcedure.query(({ ctx }) => getMedicalDashboardForUser(ctx.user.id)),
+    timeline: protectedProcedure.query(({ ctx }) => getMedicalRecordsForUser(ctx.user.id)),
   }),
 });
 

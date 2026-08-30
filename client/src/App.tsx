@@ -3,24 +3,38 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Laboratory from "./pages/Laboratory";
+import Login from "./pages/Login";
 import Radiology from "./pages/Radiology";
 import PhysicianReports from "./pages/PhysicianReports";
 import Pathology from "./pages/Pathology";
 import Timeline from "./pages/Timeline";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/labs"} component={Laboratory} />
-      <Route path={"/radiology"} component={Radiology} />
-      <Route path={"/physician-reports"} component={PhysicianReports} />
-      <Route path={"/pathology"} component={Pathology} />
-      <Route path={"/timeline"} component={Timeline} />
+      <Route path={"/login"} component={Login} />
+      <Route path={"/"}>
+        <RequireAuth><Home /></RequireAuth>
+      </Route>
+      <Route path={"/labs"}>
+        <RequireAuth><Laboratory /></RequireAuth>
+      </Route>
+      <Route path={"/radiology"}>
+        <RequireAuth><Radiology /></RequireAuth>
+      </Route>
+      <Route path={"/physician-reports"}>
+        <RequireAuth><PhysicianReports /></RequireAuth>
+      </Route>
+      <Route path={"/pathology"}>
+        <RequireAuth><Pathology /></RequireAuth>
+      </Route>
+      <Route path={"/timeline"}>
+        <RequireAuth><Timeline /></RequireAuth>
+      </Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

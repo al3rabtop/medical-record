@@ -1,0 +1,109 @@
+import { HeartPulse, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useLocation } from "wouter";
+
+export default function Login() {
+  const [, navigate] = useLocation();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/auth/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "حدث خطأ، حاول مرة أخرى");
+        return;
+      }
+      navigate("/");
+      window.location.reload();
+    } catch {
+      setError("تعذّر الاتصال بالخادم");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center bg-[#f7f9f7] px-4"
+      dir="rtl"
+    >
+      <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-800 text-white">
+            <HeartPulse className="h-6 w-6" />
+          </span>
+          <h1 className="text-xl font-extrabold text-teal-950">رفيق الصحة</h1>
+          <p className="text-sm text-slate-500">
+            {mode === "login" ? "سجّل دخولك لمتابعة سجلك الطبي" : "أنشئ حسابك الجديد"}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700">البريد الإلكتروني</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+              placeholder="name@example.com"
+              dir="ltr"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-bold text-slate-700">كلمة المرور</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+              placeholder="••••••••"
+              dir="ltr"
+            />
+          </div>
+
+          {error && (
+            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900 disabled:opacity-60"
+          >
+            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+            {mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => {
+            setMode(mode === "login" ? "signup" : "login");
+            setError(null);
+          }}
+          className="mt-5 w-full text-center text-sm font-bold text-teal-800 hover:underline"
+        >
+          {mode === "login" ? "ليس لديك حساب؟ أنشئ واحداً" : "لديك حساب بالفعل؟ سجّل دخولك"}
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -1,4 +1,4 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import { medicalResults, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
 import { classifyMedicalRecord, deriveTrend, interpretResultTrend, type MedicalStatus, type TrendInterpretation } from "../shared/medical";
@@ -20,11 +20,16 @@ export type ResultCard = {
 
 const priorityCodes = ["hemoglobin", "ferritin", "total_cholesterol", "ldl", "hba1c", "tsh", "urine_wbc"];
 
-export async function getPublicMedicalRecords() {
+export async function getMedicalRecordsForUser(userId: number) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
 
-  const visits = await db.select().from(medicalVisits).orderBy(desc(medicalVisits.examDate));
+  const visits = await db
+    .select()
+    .from(medicalVisits)
+    .where(eq(medicalVisits.userId, userId))
+    .orderBy(desc(medicalVisits.examDate));
+
   const results = await db
     .select({
       id: medicalResults.id,
@@ -41,6 +46,7 @@ export async function getPublicMedicalRecords() {
     })
     .from(medicalResults)
     .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
+    .where(eq(medicalVisits.userId, userId))
     .orderBy(desc(medicalVisits.examDate), asc(medicalResults.id));
 
   return { visits, results };
@@ -96,8 +102,8 @@ export function makeResultCards(
     });
 }
 
-export async function getPublicMedicalDashboard() {
-  const { visits, results } = await getPublicMedicalRecords();
+export async function getMedicalDashboardForUser(userId: number) {
+  const { visits, results } = await getMedicalRecordsForUser(userId);
   const cards = makeResultCards(results);
   const classifiedVisits = visits.map((visit) => ({
     ...visit,

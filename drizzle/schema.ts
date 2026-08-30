@@ -1,7 +1,7 @@
 import { decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
- * Core user table backing auth flow.
+ * Core user table backing email/password auth.
  * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
@@ -11,11 +11,9 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  passwordHash: varchar("passwordHash", { length: 100 }).notNull(),
   name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -25,9 +23,11 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/** Medical events are intentionally date-first, so the public timeline never relies on upload time. */
+/** Medical events are intentionally date-first, so the timeline never relies on upload time. */
 export const medicalVisits = mysqlTable("medicalVisits", {
   id: int("id").autoincrement().primaryKey(),
+  /** Owning account. Nullable temporarily to allow backfilling pre-existing rows. */
+  userId: int("userId").references(() => users.id, { onDelete: "cascade" }),
   visitNumber: varchar("visitNumber", { length: 32 }).notNull().unique(),
   examDate: varchar("examDate", { length: 10 }).notNull(),
   reportDate: varchar("reportDate", { length: 10 }),
@@ -41,7 +41,10 @@ export const medicalVisits = mysqlTable("medicalVisits", {
   summary: text("summary"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => [index("medicalVisits_examDate_idx").on(table.examDate)]);
+}, (table) => [
+  index("medicalVisits_examDate_idx").on(table.examDate),
+  index("medicalVisits_userId_idx").on(table.userId),
+]);
 
 /** Numeric values are saved where possible, while valueText preserves the original report wording. */
 export const medicalResults = mysqlTable("medicalResults", {

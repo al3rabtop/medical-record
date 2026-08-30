@@ -1,4 +1,4 @@
-import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck } from "lucide-react";
+import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { ReactNode } from "react";
 
@@ -10,6 +10,11 @@ const navigation = [
   { href: "/pathology", label: "الخزعات وعلم الأمراض", Icon: Dna },
   { href: "/timeline", label: "السجل الزمني", Icon: History },
 ];
+
+async function handleLogout() {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.href = "/login";
+}
 
 export function PortalShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -27,7 +32,10 @@ export function PortalShell({ children }: { children: ReactNode }) {
               return <Link key={href} href={href} className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition ${active ? "bg-teal-800 text-white shadow-sm" : "text-slate-600 hover:bg-teal-50 hover:text-teal-900"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
             })}
           </nav>
-          <Link href="/timeline" className="hidden items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 sm:flex"><History className="h-4 w-4" />السجل الكامل</Link>
+          <div className="hidden items-center gap-2 sm:flex">
+            <Link href="/timeline" className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"><History className="h-4 w-4" />السجل الكامل</Link>
+            <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
+          </div>
         </div>
         <nav className="container flex gap-2 overflow-x-auto pb-3 lg:hidden" aria-label="بوابات السجل على الهاتف">
           {navigation.map(({ href, label, Icon }) => {
