@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { isNull } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import type { Express, Request, Response } from "express";
-import { medicalVisits } from "../../drizzle/schema";
+import { medicalVisits, users } from "../../drizzle/schema";
 import { createUser, getDb, getUserByEmail } from "../db";
 
 /**
@@ -21,6 +21,9 @@ export function registerAdminBootstrapRoute(app: Express) {
 
     const email = String(req.query.email ?? "").trim().toLowerCase();
     const password = String(req.query.password ?? "");
+    const patientName = String(req.query.patientName ?? "").trim();
+    const birthYearRaw = Number(req.query.birthYear);
+    const birthYear = Number.isInteger(birthYearRaw) ? birthYearRaw : null;
 
     if (!email || !password || password.length < 8) {
       res.status(400).json({ error: "email and password (>=8 chars) are required" });
@@ -41,10 +44,20 @@ export function registerAdminBootstrapRoute(app: Express) {
       user = await createUser({
         email,
         passwordHash,
+        patientName: patientName || null,
+        birthYear,
         role: "admin",
         lastSignedIn: new Date(),
       });
       created = true;
+    } else if (patientName || birthYear) {
+      await db
+        .update(users)
+        .set({
+          ...(patientName ? { patientName } : {}),
+          ...(birthYear ? { birthYear } : {}),
+        })
+        .where(eq(users.id, user.id));
     }
 
     if (!user) {

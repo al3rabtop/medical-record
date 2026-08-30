@@ -77,10 +77,11 @@ function setSessionCookie(req: Request, res: Response, token: string) {
 /** Registers email/password auth routes: signup, login, logout, me. */
 export function registerAuthRoutes(app: Express) {
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
-    const { email, password, name } = (req.body ?? {}) as {
+    const { email, password, patientName, birthYear } = (req.body ?? {}) as {
       email?: string;
       password?: string;
-      name?: string;
+      patientName?: string;
+      birthYear?: number | string;
     };
 
     if (!isNonEmptyString(email) || !EMAIL_RE.test(email.trim())) {
@@ -89,6 +90,17 @@ export function registerAuthRoutes(app: Express) {
     }
     if (!isNonEmptyString(password) || password.length < 8) {
       res.status(400).json({ error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" });
+      return;
+    }
+    if (!isNonEmptyString(patientName) || patientName.trim().length < 2) {
+      res.status(400).json({ error: "اسم المريض مطلوب" });
+      return;
+    }
+
+    const year = Number(birthYear);
+    const currentYear = new Date().getFullYear();
+    if (!Number.isInteger(year) || year < 1900 || year > currentYear) {
+      res.status(400).json({ error: "سنة الميلاد غير صالحة" });
       return;
     }
 
@@ -103,7 +115,8 @@ export function registerAuthRoutes(app: Express) {
     const user = await createUser({
       email: normalizedEmail,
       passwordHash,
-      name: isNonEmptyString(name) ? name : null,
+      patientName: patientName.trim(),
+      birthYear: year,
       role: "user",
       lastSignedIn: new Date(),
     });

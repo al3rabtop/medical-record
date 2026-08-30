@@ -7,6 +7,8 @@ export default function Login() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +20,11 @@ export default function Login() {
       const res = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(
+          mode === "signup"
+            ? { email, password, patientName, birthYear: Number(birthYear) }
+            : { email, password }
+        ),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -51,6 +57,37 @@ export default function Login() {
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {mode === "signup" && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-bold text-slate-700">اسم المريض</label>
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  value={patientName}
+                  onChange={e => setPatientName(e.target.value)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+                  placeholder="الاسم الكامل"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-bold text-slate-700">سنة الميلاد</label>
+                <input
+                  type="number"
+                  required
+                  min={1900}
+                  max={new Date().getFullYear()}
+                  value={birthYear}
+                  onChange={e => setBirthYear(e.target.value)}
+                  className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
+                  placeholder="1965"
+                  dir="ltr"
+                />
+              </div>
+            </>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-bold text-slate-700">البريد الإلكتروني</label>
             <input

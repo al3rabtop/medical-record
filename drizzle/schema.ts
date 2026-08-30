@@ -14,6 +14,10 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   passwordHash: varchar("passwordHash", { length: 100 }).notNull(),
   name: text("name"),
+  /** Patient's full name, shown in the app header. */
+  patientName: varchar("patientName", { length: 160 }),
+  /** Birth year only — day/month intentionally not collected. */
+  birthYear: int("birthYear"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

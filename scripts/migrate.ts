@@ -67,6 +67,8 @@ async function main() {
         email VARCHAR(320) NOT NULL UNIQUE,
         passwordHash VARCHAR(100) NOT NULL,
         name TEXT,
+        patientName VARCHAR(160) NULL,
+        birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -82,6 +84,8 @@ async function main() {
         email VARCHAR(320) NOT NULL UNIQUE,
         passwordHash VARCHAR(100) NOT NULL,
         name TEXT,
+        patientName VARCHAR(160) NULL,
+        birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -90,6 +94,16 @@ async function main() {
     `);
   } else {
     console.log("[migrate] users table already up to date.");
+  }
+
+  // --- users: patientName / birthYear (added after initial accounts release)
+  if (!(await columnExists(conn, "users", "patientName"))) {
+    console.log("[migrate] Adding users.patientName...");
+    await conn.query(`ALTER TABLE users ADD COLUMN patientName VARCHAR(160) NULL`);
+  }
+  if (!(await columnExists(conn, "users", "birthYear"))) {
+    console.log("[migrate] Adding users.birthYear...");
+    await conn.query(`ALTER TABLE users ADD COLUMN birthYear INT NULL`);
   }
 
   // --- medicalVisits.userId: add if missing (nullable, for backfill safety)

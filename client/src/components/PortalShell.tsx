@@ -1,6 +1,7 @@
 import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { ReactNode } from "react";
+import { trpc } from "@/lib/trpc";
 
 const navigation = [
   { href: "/", label: "الرئيسية", Icon: Home },
@@ -18,13 +19,15 @@ async function handleLogout() {
 
 export function PortalShell({ children }: { children: ReactNode }) {
   const [location] = useLocation();
+  const me = trpc.auth.me.useQuery();
+  const patientName = me.data?.patientName ?? null;
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f7f9f7] text-slate-900" dir="rtl">
       <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f7f9f7]/95 backdrop-blur-xl">
         <div className="container flex h-[4.75rem] items-center justify-between gap-4">
           <Link href="/" className="flex shrink-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-800 text-white shadow-[0_8px_20px_-8px_rgba(15,118,110,0.8)]"><HeartPulse className="h-5 w-5" /></span>
-            <span><span className="block text-base font-extrabold tracking-tight text-teal-950">رفيق الصحة</span><span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700">أميرة محمد علي الهسي</span></span>
+            <span><span className="block text-base font-extrabold tracking-tight text-teal-950">رفيق الصحة</span>{patientName && <span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700">{patientName}</span>}</span>
           </Link>
           <nav className="hidden items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 lg:flex" aria-label="بوابات السجل">
             {navigation.map(({ href, label, Icon }) => {
