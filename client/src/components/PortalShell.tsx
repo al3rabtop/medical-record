@@ -1,4 +1,4 @@
-import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut } from "lucide-react";
+import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, ShieldCheck, LogOut, FilePlus2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import type { ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
@@ -10,6 +10,7 @@ const navigation = [
   { href: "/physician-reports", label: "تقارير الأطباء", Icon: Stethoscope },
   { href: "/pathology", label: "الخزعات وعلم الأمراض", Icon: Dna },
   { href: "/timeline", label: "السجل الزمني", Icon: History },
+  { href: "/upload", label: "رفع تقرير", Icon: FilePlus2 },
 ];
 
 async function handleLogout() {
@@ -36,7 +37,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             })}
           </nav>
           <div className="hidden items-center gap-2 sm:flex">
-            <Link href="/timeline" className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"><History className="h-4 w-4" />السجل الكامل</Link>
+            <Link href="/upload" className="flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900"><FilePlus2 className="h-4 w-4" />رفع تقرير</Link>
             <button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>

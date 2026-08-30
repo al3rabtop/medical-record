@@ -5,6 +5,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerAuthRoutes } from "./auth";
 import { registerAdminImportRoute } from "./adminImport";
 import { registerAdminBootstrapRoute } from "./adminBootstrap";
+import { registerExtractRoute } from "./extract";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -18,6 +19,7 @@ async function startServer() {
   registerAuthRoutes(app);
   registerAdminImportRoute(app);
   registerAdminBootstrapRoute(app);
+  registerExtractRoute(app);
   // tRPC API
   app.use(
     "/api/trpc",

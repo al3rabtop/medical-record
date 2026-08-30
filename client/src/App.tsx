@@ -12,6 +12,7 @@ import Radiology from "./pages/Radiology";
 import PhysicianReports from "./pages/PhysicianReports";
 import Pathology from "./pages/Pathology";
 import Timeline from "./pages/Timeline";
+import Upload from "./pages/Upload";
 
 function Router() {
   return (
@@ -31,6 +32,9 @@ function Router() {
       </Route>
       <Route path={"/pathology"}>
         <RequireAuth><Pathology /></RequireAuth>
+      </Route>
+      <Route path={"/upload"}>
+        <RequireAuth><Upload /></RequireAuth>
       </Route>
       <Route path={"/timeline"}>
         <RequireAuth><Timeline /></RequireAuth>

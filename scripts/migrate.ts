@@ -106,6 +106,73 @@ async function main() {
     await conn.query(`ALTER TABLE users ADD COLUMN birthYear INT NULL`);
   }
 
+  // --- medical tables: create when missing (fresh installs)
+  if (!(await tableExists(conn, "medicalVisits"))) {
+    console.log("[migrate] Creating medicalVisits...");
+    await conn.query(`
+      CREATE TABLE medicalVisits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NULL,
+        visitNumber VARCHAR(32) NOT NULL UNIQUE,
+        examDate VARCHAR(10) NOT NULL,
+        reportDate VARCHAR(10),
+        reportType VARCHAR(64) NOT NULL DEFAULT 'تحاليل مختبرية',
+        department VARCHAR(128),
+        physician VARCHAR(128),
+        facility VARCHAR(160),
+        source VARCHAR(128),
+        testCount INT NOT NULL DEFAULT 0,
+        abnormalCount INT NOT NULL DEFAULT 0,
+        summary TEXT,
+        createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX medicalVisits_examDate_idx (examDate)
+      ) DEFAULT CHARSET=utf8mb4
+    `);
+  }
+
+  if (!(await tableExists(conn, "medicalResults"))) {
+    console.log("[migrate] Creating medicalResults...");
+    await conn.query(`
+      CREATE TABLE medicalResults (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        visitId INT NOT NULL,
+        code VARCHAR(80) NOT NULL,
+        label VARCHAR(160) NOT NULL,
+        category VARCHAR(80) NOT NULL,
+        numericValue DECIMAL(12,3),
+        valueText VARCHAR(80) NOT NULL,
+        unit VARCHAR(32),
+        referenceRange VARCHAR(80),
+        status ENUM('reassuring','follow_up','unavailable') NOT NULL DEFAULT 'unavailable',
+        note TEXT,
+        createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX medicalResults_visit_idx (visitId),
+        INDEX medicalResults_code_idx (code),
+        UNIQUE INDEX medicalResults_visit_code_idx (visitId, code),
+        CONSTRAINT medicalResults_visit_fk FOREIGN KEY (visitId)
+          REFERENCES medicalVisits(id) ON DELETE CASCADE
+      ) DEFAULT CHARSET=utf8mb4
+    `);
+  }
+
+  if (!(await tableExists(conn, "medicalDocuments"))) {
+    console.log("[migrate] Creating medicalDocuments...");
+    await conn.query(`
+      CREATE TABLE medicalDocuments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        visitId INT NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        storageKey VARCHAR(255) NOT NULL,
+        mimeType VARCHAR(120),
+        createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX medicalDocuments_visit_idx (visitId),
+        CONSTRAINT medicalDocuments_visit_fk FOREIGN KEY (visitId)
+          REFERENCES medicalVisits(id) ON DELETE CASCADE
+      ) DEFAULT CHARSET=utf8mb4
+    `);
+  }
+
   // --- medicalVisits.userId: add if missing (nullable, for backfill safety)
   const visitsHasUserId = await columnExists(conn, "medicalVisits", "userId");
   if (!visitsHasUserId) {
