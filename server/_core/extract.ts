@@ -37,6 +37,24 @@ const SYSTEM_PROMPT = `أنت مساعد لاستخراج نتائج التحا�
 - استخرج كل الفحوصات الموجودة في التقرير.
 - لا تحسب أو تستنتج قيماً غير مكتوبة صراحة.`;
 
+/** Upload guards: bound worst-case cost and latency per extraction. */
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
+const MAX_PDF_PAGES = 15;
+
+/** Counts PDF pages from base64 without a parser dependency. */
+function countPdfPages(base64Data: string): number {
+  try {
+    const buf = Buffer.from(base64Data, "base64");
+    const text = buf.toString("latin1");
+    const counts = text.match(/\/Type\s*\/Page[^s]/g);
+    if (counts && counts.length > 0) return counts.length;
+    const fromCount = text.match(/\/Count\s+(\d+)/);
+    return fromCount ? Number(fromCount[1]) : 0;
+  } catch {
+    return 0;
+  }
+}
+
 type ExtractedResult = {
   label: string;
   labelOriginal?: string;
@@ -112,16 +130,27 @@ export function registerExtractRoute(app: Express) {
       return;
     }
 
-    // Base64 inflates by ~33%; keep well inside the body-parser limit.
+    // Base64 inflates by ~33%. Two hard limits keep both cost and latency bounded:
+    // total upload size, and PDF page count (pages dominate input-token cost).
     const approxBytes = Math.floor((fileData.length * 3) / 4);
-    if (approxBytes > 28 * 1024 * 1024) {
+    if (approxBytes > MAX_UPLOAD_BYTES) {
       res.status(413).json({
-        error: "حجم الملف كبير جداً. جرّب تصدير التقرير بجودة أقل أو رفعه على أجزاء.",
+        error: `حجم الملف كبير جداً (الحد ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} ميجابايت). صدّر التقرير بجودة أقل أو ارفعه على أجزاء.`,
       });
       return;
     }
 
     const isPdf = mediaType === "application/pdf";
+
+    if (isPdf) {
+      const pages = countPdfPages(fileData);
+      if (pages > MAX_PDF_PAGES) {
+        res.status(413).json({
+          error: `التقرير ${pages} صفحة، والحد الأقصى ${MAX_PDF_PAGES} صفحة. ارفعه على أجزاء أو استخرج صفحات النتائج فقط.`,
+        });
+        return;
+      }
+    }
     const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!isPdf && !allowedImages.includes(mediaType)) {
       res.status(400).json({ error: "صيغة غير مدعومة. استخدم صورة أو PDF." });
@@ -151,7 +180,7 @@ export function registerExtractRoute(app: Express) {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 16000,
+          max_tokens: 8000,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content }],
         }),
