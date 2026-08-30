@@ -144,6 +144,8 @@ async function main() {
         valueText VARCHAR(80) NOT NULL,
         unit VARCHAR(32),
         referenceRange VARCHAR(80),
+        abbr VARCHAR(120),
+        about VARCHAR(400),
         status ENUM('reassuring','follow_up','unavailable') NOT NULL DEFAULT 'unavailable',
         note TEXT,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -171,6 +173,18 @@ async function main() {
           REFERENCES medicalVisits(id) ON DELETE CASCADE
       ) DEFAULT CHARSET=utf8mb4
     `);
+  }
+
+  // --- medicalResults: abbr / about (added with the test-info feature)
+  if (await tableExists(conn, "medicalResults")) {
+    if (!(await columnExists(conn, "medicalResults", "abbr"))) {
+      console.log("[migrate] Adding medicalResults.abbr...");
+      await conn.query(`ALTER TABLE medicalResults ADD COLUMN abbr VARCHAR(120) NULL`);
+    }
+    if (!(await columnExists(conn, "medicalResults", "about"))) {
+      console.log("[migrate] Adding medicalResults.about...");
+      await conn.query(`ALTER TABLE medicalResults ADD COLUMN about VARCHAR(400) NULL`);
+    }
   }
 
   // --- medicalVisits.userId: add if missing (nullable, for backfill safety)

@@ -10,6 +10,8 @@ type MetricHistoryDialogProps = {
   onOpenChange: (open: boolean) => void;
   card: {
     code: string;
+    abbr?: string | null;
+    about?: string | null;
     label: string;
     category: string;
     value: string;
@@ -35,7 +37,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
       <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto border-slate-200 bg-[#fbfcfb] p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-slate-200 bg-white px-6 py-6 text-right sm:px-8">
           <div className="flex items-start justify-between gap-4 pl-8">
-            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · السجل الكامل</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{card.label}</DialogTitle>{getTestInfo(card.code) && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{getTestInfo(card.code)!.abbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{getTestInfo(card.code)?.about ?? "جميع القياسات المسجلة مرتبة من الأقدم إلى الأحدث."}</DialogDescription></div>
+            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · السجل الكامل</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{card.label}</DialogTitle>{(card.abbr ?? getTestInfo(card.code)?.abbr) && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{card.abbr ?? getTestInfo(card.code)!.abbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{card.about ?? getTestInfo(card.code)?.about ?? "جميع القياسات المسجلة مرتبة من الأقدم إلى الأحدث."}</DialogDescription></div>
             <MedicalStatusBadge status={card.status} />
           </div>
         </DialogHeader>

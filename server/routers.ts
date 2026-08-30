@@ -36,6 +36,8 @@ export const appRouter = router({
                 numericValue: z.number().nullable(),
                 unit: z.string().nullable(),
                 referenceRange: z.string().nullable(),
+                abbr: z.string().nullable().optional(),
+                about: z.string().nullable().optional(),
               })
             )
             .min(1),

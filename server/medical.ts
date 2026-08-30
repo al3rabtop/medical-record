@@ -10,6 +10,8 @@ export type ResultCard = {
   value: string;
   unit: string | null;
   referenceRange: string | null;
+  abbr: string | null;
+  about: string | null;
   examDate: string;
   status: MedicalStatus;
   trend: ReturnType<typeof deriveTrend>;
@@ -41,6 +43,8 @@ export async function getMedicalRecordsForUser(userId: number) {
       valueText: medicalResults.valueText,
       unit: medicalResults.unit,
       referenceRange: medicalResults.referenceRange,
+      abbr: medicalResults.abbr,
+      about: medicalResults.about,
       status: medicalResults.status,
       examDate: medicalVisits.examDate,
     })
@@ -57,6 +61,8 @@ export function makeResultCards(
     code: string;
     label: string;
     category: string;
+    abbr?: string | null;
+    about?: string | null;
     numericValue: string | null;
     valueText: string;
     unit: string | null;
@@ -81,6 +87,8 @@ export function makeResultCards(
         value: latest.valueText,
         unit: latest.unit,
         referenceRange: latest.referenceRange,
+        abbr: latest.abbr ?? null,
+        about: latest.about ?? null,
         examDate: latest.examDate,
         status: latest.status,
         trend: deriveTrend(currentValue, previousValue),
@@ -170,6 +178,8 @@ export type ReviewedResult = {
   numericValue: number | null;
   unit: string | null;
   referenceRange: string | null;
+  abbr?: string | null;
+  about?: string | null;
 };
 
 /** Saves a user-reviewed report as a visit plus its results. */
@@ -232,6 +242,8 @@ export async function saveReviewedReport(
       valueText: r.value.slice(0, 80),
       unit: r.unit ? r.unit.slice(0, 32) : null,
       referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
+      abbr: r.abbr ? r.abbr.slice(0, 120) : null,
+      about: r.about ? r.about.slice(0, 400) : null,
       status: r.status,
     };
   });

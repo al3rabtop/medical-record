@@ -25,6 +25,8 @@ const SYSTEM_PROMPT = `أنت مساعد لاستخراج نتائج التحا�
       "numericValue": رقم أو null,
       "unit": "الوحدة أو null",
       "referenceRange": "المدى المرجعي أو null",
+      "abbr": "الاسم العلمي/الإنجليزي المختصر للفحص كما يعرفه الأطباء، مثال: Ferritin أو Hemoglobin (Hb)",
+      "about": "شرح مبسّط بالعربية في جملة واحدة قصيرة يوضح ماذا يقيس هذا الفحص ولماذا يهم",
       "confidence": "high أو low"
     }
   ]
@@ -44,6 +46,8 @@ type ExtractedResult = {
   numericValue: number | null;
   unit: string | null;
   referenceRange: string | null;
+  abbr?: string | null;
+  about?: string | null;
   confidence: "high" | "low";
 };
 

@@ -61,6 +61,10 @@ export const medicalResults = mysqlTable("medicalResults", {
   valueText: varchar("valueText", { length: 80 }).notNull(),
   unit: varchar("unit", { length: 32 }),
   referenceRange: varchar("referenceRange", { length: 80 }),
+  /** Scientific/English short name, shown for clinicians. */
+  abbr: varchar("abbr", { length: 120 }),
+  /** One-line plain-Arabic explanation of what this test measures. */
+  about: varchar("about", { length: 400 }),
   status: mysqlEnum("status", ["reassuring", "follow_up", "unavailable"]).notNull().default("unavailable"),
   note: text("note"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

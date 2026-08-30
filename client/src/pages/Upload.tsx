@@ -18,6 +18,8 @@ type Row = {
   numericValue: number | null;
   unit: string | null;
   referenceRange: string | null;
+  abbr: string | null;
+  about: string | null;
   confidence: "high" | "low";
 };
 
@@ -114,6 +116,8 @@ export default function Upload() {
         numericValue: r.numericValue,
         unit: r.unit?.trim() || null,
         referenceRange: r.referenceRange?.trim() || null,
+        abbr: r.abbr,
+        about: r.about,
       })),
     });
   }
