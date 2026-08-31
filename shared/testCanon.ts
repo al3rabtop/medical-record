@@ -18,30 +18,31 @@ const norm = (s: string) =>
 
 /** Canonical code -> every known alias (Arabic labels, English names, abbreviations). */
 const ALIAS_GROUPS: Record<string, string[]> = {
-  hemoglobin: ["الهيموغلوبين", "هيموغلوبين", "hemoglobin", "haemoglobin", "hb"],
+  hemoglobin: ["الهيموغلوبين", "الهيموجلوبين", "هيموغلوبين", "هيموجلوبين", "hemoglobin", "haemoglobin", "hb"],
   hematocrit: ["الهيماتوكريت", "هيماتوكريت", "hematocrit", "haematocrit", "hct", "pcv"],
-  rbc: ["كريات الدم الحمراء", "الكريات الحمراء", "rbc", "redbloodcells", "erythrocytes"],
-  wbc: ["كريات الدم البيضاء", "الكريات البيضاء", "wbc", "whitebloodcells", "leukocytes"],
+  rbc: ["كريات الدم الحمراء", "الكريات الحمراء", "خلايا الدم الحمراء", "عدد كريات الدم الحمراء", "rbc", "redbloodcells", "erythrocytes"],
+  wbc: ["كريات الدم البيضاء", "الكريات البيضاء", "خلايا الدم البيضاء", "عدد خلايا الدم البيضاء", "wbc", "whitebloodcells", "leukocytes"],
   platelets: ["الصفائح الدموية", "صفائح", "platelets", "plt"],
-  mcv: ["متوسط حجم الكرية", "mcv", "meancorpuscularvolume"],
-  mch: ["متوسط هيموغلوبين الكرية", "mch", "meancorpuscularhemoglobin"],
-  mchc: ["تركيز هيموغلوبين الكرية", "mchc"],
-  rdw: ["تباين حجم الكريات", "rdw"],
-  neutrophils: ["العدلات", "neutrophils", "neut"],
-  lymphocytes: ["الخلايا اللمفاوية", "لمفاويات", "lymphocytes", "lym"],
-  monocytes: ["الوحيدات", "monocytes", "mono"],
+  mcv: ["متوسط حجم الكرية", "متوسط حجم الخلية", "متوسط حجم خلايا الدم الحمراء", "متوسط حجم كريات الدم", "mcv", "meancorpuscularvolume"],
+  mch: ["متوسط هيموغلوبين الكرية", "متوسط محتوى الهيموجلوبين", "متوسط الهيموجلوبين في الكرية", "متوسط وزن الهيموجلوبين", "mch", "meancorpuscularhemoglobin"],
+  mchc: ["تركيز هيموغلوبين الكرية", "تركيز الهيموجلوبين الخلوي المتوسط", "متوسط تركيز الهيموجلوبين", "mchc"],
+  rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "rdw"],
+  neutrophils: ["العدلات", "النيتروفيل", "الخلايا المتعادلة", "المتعادلات", "الخلايا المتعددة النوى", "neutrophils", "neut"],
+  lymphocytes: ["الخلايا اللمفاوية", "اللمفاويات", "الليمفوسيت", "الليمفوسيتات", "الليمفوسيت النسبة", "الليمفوسيت العدد", "الليمفوسيتات العدد المطلق", "لمفاويات", "lymphocytes", "lym"],
+  monocytes: ["الوحيدات", "الأحادية", "الخلايا الأحادية", "الخلايا الأحادية العدد المطلق", "الخلايا أحادية النوى", "monocytes", "mono"],
   eosinophils: ["الحمضات", "الخلايا الحمضية", "eosinophils", "eos"],
-  basophils: ["الأسسات", "الخلايا القاعدية", "basophils", "baso"],
+  basophils: ["الأسسات", "الخلايا القاعدية", "القاعديات", "basophils", "baso"],
 
   ferritin: ["الفيريتين", "فيريتين", "ferritin"],
   iron: ["الحديد", "حديد المصل", "serumiron", "iron", "fe"],
 
   total_cholesterol: ["الكوليسترول الكلي", "كوليسترول كلي", "totalcholesterol", "cholesterol"],
-  ldl: ["الكوليسترول الضار", "ldl", "ldlcholesterol"],
-  hdl: ["الكوليسترول النافع", "hdl", "hdlcholesterol"],
+  ldl: ["الكوليسترول الضار", "كوليسترول البروتين الدهني منخفض الكثافة", "ldl", "ldlcholesterol"],
+  hdl: ["الكوليسترول النافع", "كوليسترول البروتين الدهني عالي الكثافة", "hdl", "hdlcholesterol"],
+  cholesterol_hdl_ratio: ["نسبة الكوليسترول لـ hdl", "نسبة الكوليسترول الى hdl", "نسبة الكوليسترول للـhdl", "cholesterolhdlratio", "tcholhdlratio"],
   triglycerides: ["الدهون الثلاثية", "triglycerides", "tg"],
 
-  hba1c: ["السكر التراكمي", "hba1c", "a1c", "glycatedhemoglobin"],
+  hba1c: ["السكر التراكمي", "الهيموجلوبين السكري", "hba1c", "a1c", "glycatedhemoglobin"],
   glucose: ["سكر الدم الصائم", "الجلوكوز", "glucose", "fbg", "fastingglucose"],
 
   tsh: ["الهرمون المنبه للغدة الدرقية", "الهرمون المنبه للدرقية", "الهرمون المنشط للغدة الدرقية", "tsh", "thyroidstimulatinghormone", "thyrotropin"],
@@ -60,16 +61,17 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   egfr: ["egfr", "estimatedgfr"],
   uric_acid: ["حمض اليوريك", "uricacid"],
 
-  alt: ["إنزيم alt", "alt", "sgpt", "alanineaminotransferase"],
+  alt: ["إنزيم alt", "ألانين أمينوترانسفيراز", "إنزيم ناقل أمين الألانين", "alt", "sgpt", "alanineaminotransferase"],
   alt_u_l: [],
-  ast: ["إنزيم ast", "ast", "sgot", "aspartateaminotransferase"],
-  alp: ["الفوسفاتاز القلوية", "alkalinephosphatase", "alp"],
+  ast: ["إنزيم ast", "أسبارتات أمينوترانسفيراز", "إنزيم ناقل أمين الأسبارتات", "ast", "sgot", "aspartateaminotransferase"],
+  alp: ["الفوسفاتاز القلوية", "الفسفاتاز القلوي", "alkalinephosphatase", "alp"],
   bilirubin_total: ["البيليروبين الكلي", "totalbilirubin"],
   bilirubin_total_umol_l: [],
   bilirubin_direct: ["البيليروبين المباشر", "directbilirubin"],
-  ggt: ["gammagt", "ggt", "gammaglutamyltransferase"],
+  ggt: ["جاما جلوتاميل ترانسفيراز", "gammagt", "ggt", "gammaglutamyltransferase"],
   albumin: ["الألبومين", "albumin", "albuminserum"],
-  globulin: ["الغلوبولين", "globulin"],
+  albumin_globulin_ratio: ["نسبة الألبومين للجلوبيولين", "نسبة الالبومين للجلوبيولين", "albuminglobulinratio", "agratio"],
+  globulin: ["الغلوبولين", "الجلوبيولين", "globulin"],
   total_protein: ["البروتين الكلي", "totalprotein"],
 
   inr: ["inr", "internationalnormalizedratio"],
@@ -78,7 +80,7 @@ const ALIAS_GROUPS: Record<string, string[]> = {
 
   sodium: ["الصوديوم", "sodium", "na"],
   potassium: ["البوتاسيوم", "potassium", "k"],
-  magnesium: ["الماغنيسيوم", "magnesium", "mg"],
+  magnesium: ["الماغنيسيوم", "المغنيسيوم", "magnesium", "mg"],
   cpk: ["كرياتين فوسفوكاينيز", "cpk", "creatinephosphokinase"],
 
   urine_wbc: ["كريات الدم البيضاء في البول", "uwbc", "urinewbc"],
@@ -144,21 +146,33 @@ export function resolveTestCodeDetailed(label: string, abbr?: string | null): Te
 
   // Substring containment both ways, longest alias first, with a floor so
   // short aliases (like "k" for potassium) can't false-match unrelated text.
+  // Ratio-style tests (e.g. "نسبة الألبومين للجلوبيولين") are protected from
+  // false substring merges by their own exact aliases above, matched before
+  // this loop ever runs — so a plain differential-percentage label like
+  // "النيتروفيل النسبة" is still free to merge with its base test.
+  // Only check "does the label CONTAIN a known alias" — never the reverse
+  // ("is the label contained in some long alias"), which would let a short
+  // generic label like "الهيموجلوبين" false-match inside an unrelated long
+  // compound alias like "متوسط تركيز الهيموجلوبين" (MCHC's full name).
   for (const [aliasNorm, code] of ALIASES_BY_LENGTH) {
     if (aliasNorm.length < 4) continue;
-    if (normLabel.includes(aliasNorm) || aliasNorm.includes(normLabel)) {
+    if (normLabel.includes(aliasNorm)) {
       return { code, matched: true };
     }
   }
 
-  const slug =
+  return { code: fallbackSlug(label), matched: false };
+}
+
+function fallbackSlug(label: string): string {
+  return (
     label
       .trim()
       .toLowerCase()
       .replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, "_")
       .replace(/^_+|_+$/g, "")
-      .slice(0, 60) || "result";
-  return { code: slug, matched: false };
+      .slice(0, 60) || "result"
+  );
 }
 
 /** Convenience wrapper for callers that only need the code. */
