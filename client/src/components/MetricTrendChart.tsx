@@ -39,11 +39,13 @@ export function MetricTrendChart({
   referenceRange,
   status,
   compact = false,
+  tiny = false,
 }: {
   history: Entry[];
   referenceRange: string | null;
   status: MedicalStatus;
   compact?: boolean;
+  tiny?: boolean;
 }) {
   const rawPoints = history
     .map(h => ({
@@ -58,6 +60,28 @@ export function MetricTrendChart({
   const points = compact ? rawPoints.slice(-3) : rawPoints;
 
   if (points.length < 2) return null;
+
+  // Tiny mode: a quiet, muted-gray line with no chrome at all — purely a
+  // glance-able trend cue that never competes with the actual numbers.
+  if (tiny) {
+    return (
+      <div style={{ width: "100%", height: 28 }} dir="ltr">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={points} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="#cbd5e1"
+              strokeWidth={1.5}
+              fill="none"
+              dot={false}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
 
   const accent = status === "follow_up" ? "#eda100" : "#0f766e";
   const range = parseRange(referenceRange);

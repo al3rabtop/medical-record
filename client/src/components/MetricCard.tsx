@@ -87,8 +87,32 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
       <div className="mt-5 border-t border-dashed border-slate-200 pt-3 text-xs font-medium text-slate-500">
         آخر قياس: <span className="font-bold text-slate-700">{examDate}</span>
       </div>
-      <div className="mt-4">
-        <MetricTrendChart history={history} referenceRange={referenceRange} status={status} compact />
+      <div className="mt-3">
+        <MetricTrendChart history={history} referenceRange={referenceRange} status={status} tiny />
+      </div>
+      <div className="mt-1.5" aria-label="آخر أربع قياسات من الأقدم إلى الأحدث">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-extrabold text-slate-600">آخر {Math.min(history.length, 4)} نتائج</span>
+          <span className="text-[10px] text-slate-400">{history.length} قياسات إجمالاً</span>
+        </div>
+        <div className="mt-2 grid grid-cols-4 gap-1.5">
+          {Array.from({ length: 4 }).map((_, index) => {
+            const lastFour = history.slice(-4);
+            const item = lastFour[index];
+            const isCurrent = index === lastFour.length - 1;
+            return (
+              <div
+                key={item?.examDate ?? `empty-${index}`}
+                className={`min-w-0 rounded-lg px-1 py-2 text-center ${isCurrent ? "bg-teal-800 text-white" : item ? "bg-teal-50 text-teal-950" : "bg-slate-50 text-slate-300"}`}
+              >
+                <p className="truncate text-xs font-extrabold">{item?.value ?? "—"}</p>
+                <p className={`mt-1 truncate text-[9px] ${isCurrent ? "text-teal-100" : "text-slate-400"}`}>
+                  {item ? item.examDate.slice(2) : ""}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className={`mt-4 flex gap-2.5 rounded-xl border px-3 py-2.5 ${interpretationStyle.className}`}>
