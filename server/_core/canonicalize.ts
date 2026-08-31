@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { medicalResults } from "../../drizzle/schema";
-import { resolveTestCode } from "../../shared/testCanon";
+import { resolveTestCodeDetailed } from "../../shared/testCanon";
 import { getDb } from "../db";
 
 /**
@@ -44,9 +44,17 @@ export function registerCanonicalizeRoute(app: Express) {
       .from(medicalResults);
 
     const changes: Array<{ id: number; visitId: number; label: string; from: string; to: string }> = [];
+    const unmatched: Array<{ id: number; label: string; currentCode: string }> = [];
 
     for (const row of rows) {
-      const canonical = resolveTestCode(row.label, row.abbr);
+      const { code: canonical, matched } = resolveTestCodeDetailed(row.label, row.abbr);
+      if (!matched) {
+        // Never replace an existing code with a freshly generated fallback
+        // slug — that would downgrade a perfectly good code (e.g. "inr")
+        // into an ugly one just because this label wasn't recognised.
+        unmatched.push({ id: row.id, label: row.label, currentCode: row.code });
+        continue;
+      }
       if (canonical !== row.code) {
         changes.push({ id: row.id, visitId: row.visitId, label: row.label, from: row.code, to: canonical });
       }
@@ -89,6 +97,7 @@ export function registerCanonicalizeRoute(app: Express) {
       changedCount: changes.length,
       appliedCount: dryRun ? 0 : changes.length - skipped.length,
       skippedCount: skipped.length,
+      unmatchedCount: unmatched.length,
       changes: changes.slice(0, 200),
       skipped: skipped.slice(0, 50),
     });

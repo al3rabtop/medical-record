@@ -49,7 +49,7 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   total_t4: ["t4 الكلي", "totalt4", "t4"],
   free_t4: ["ft4", "freet4"],
 
-  vitamin_d: ["فيتامين د", "vitamind", "25ohvitamind", "vitamind25oh"],
+  vitamin_d: ["فيتامين د", "فيتامين d", "vitamind", "25ohvitamind", "vitamind25oh"],
   vitamin_b12: ["فيتامين ب12", "فيتامين b12", "vitaminb12", "b12", "cobalamin"],
   calcium: ["الكالسيوم", "calcium", "ca"],
 
@@ -97,33 +97,71 @@ for (const [code, aliases] of Object.entries(ALIAS_GROUPS)) {
   for (const alias of aliases) ALIAS_TO_CODE.set(norm(alias), code);
 }
 
+// Sorted longest-first so substring matching prefers the more specific alias
+// (e.g. "creatinine in serum" should match "creatinine", not a shorter
+// unrelated alias that happens to be a substring).
+const ALIASES_BY_LENGTH = Array.from(ALIAS_TO_CODE.entries()).sort((a, b) => b[0].length - a[0].length);
+
+/** Pulls embedded Latin tokens like "INR" or "SGPT" out of a mixed-script label. */
+function latinTokens(s: string): string[] {
+  return s.match(/[A-Za-z][A-Za-z0-9/]{1,}/g) ?? [];
+}
+
+export type TestCodeResolution = {
+  code: string;
+  /** True when this matched a known alias; false when it's a generated fallback slug. */
+  matched: boolean;
+};
+
 /**
- * Resolves a test to its canonical code. Tries the English abbreviation
- * first (most specific), then the Arabic/free-text label. Falls back to a
- * slug of the label so unrecognised tests still get a stable, unique code.
+ * Resolves a test to its canonical code. Tries, in order: the English
+ * abbreviation field, embedded Latin tokens inside the label (many lab
+ * exports write "الاسم العربي ENGLISH_ABBR" as one string), an exact label
+ * match, then substring containment. Falls back to a slug of the label so
+ * unrecognised tests still get a stable code — but callers that care about
+ * not overwriting a perfectly good existing code should check `matched`.
  */
-export function resolveTestCode(label: string, abbr?: string | null): string {
+export function resolveTestCodeDetailed(label: string, abbr?: string | null): TestCodeResolution {
   if (abbr) {
-    // Strip a parenthetical like "Hemoglobin (Hb)" -> try both "hemoglobin" and "hb".
     const core = abbr.replace(/\([^)]*\)/g, " ").trim();
     const paren = abbr.match(/\(([^)]+)\)/)?.[1] ?? "";
     for (const candidate of [core, paren, abbr]) {
       const hit = ALIAS_TO_CODE.get(norm(candidate));
-      if (hit) return hit;
+      if (hit) return { code: hit, matched: true };
     }
   }
 
-  const labelHit = ALIAS_TO_CODE.get(norm(label));
-  if (labelHit) return labelHit;
+  const normLabel = norm(label);
 
-  // Unknown test: fall back to a slug derived from the label so it still
-  // gets a stable code across saves of the exact same wording.
-  return (
+  const exact = ALIAS_TO_CODE.get(normLabel);
+  if (exact) return { code: exact, matched: true };
+
+  // Embedded English abbreviation, e.g. "النسبة المعيارية الدولية INR" -> INR.
+  for (const token of latinTokens(label)) {
+    const hit = ALIAS_TO_CODE.get(norm(token));
+    if (hit) return { code: hit, matched: true };
+  }
+
+  // Substring containment both ways, longest alias first, with a floor so
+  // short aliases (like "k" for potassium) can't false-match unrelated text.
+  for (const [aliasNorm, code] of ALIASES_BY_LENGTH) {
+    if (aliasNorm.length < 4) continue;
+    if (normLabel.includes(aliasNorm) || aliasNorm.includes(normLabel)) {
+      return { code, matched: true };
+    }
+  }
+
+  const slug =
     label
       .trim()
       .toLowerCase()
       .replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, "_")
       .replace(/^_+|_+$/g, "")
-      .slice(0, 60) || "result"
-  );
+      .slice(0, 60) || "result";
+  return { code: slug, matched: false };
+}
+
+/** Convenience wrapper for callers that only need the code. */
+export function resolveTestCode(label: string, abbr?: string | null): string {
+  return resolveTestCodeDetailed(label, abbr).code;
 }
