@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, ChevronLeft, Minus } from "lucide-react";
 import { CheckCircle2, CircleAlert, Info } from "lucide-react";
 import { type TrendInterpretation } from "@shared/medical";
 import { getTestInfo } from "@shared/testInfo";
+import { MetricTrendChart } from "@/components/MetricTrendChart";
 
 type MetricCardProps = {
   code: string;
@@ -60,6 +61,23 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
           <p className="metric-value mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
             {value}<span className="mr-1.5 text-sm font-semibold text-slate-500">{unit ?? ""}</span>
           </p>
+          {(() => {
+            const prev = history.length > 1 ? history[history.length - 2] : null;
+            if (!prev) return null;
+            const cur = Number(String(value).replace(",", "."));
+            const old = Number(String(prev.value).replace(",", "."));
+            if (Number.isNaN(cur) || Number.isNaN(old)) return null;
+            const diff = cur - old;
+            if (diff === 0) return <p className="mt-1.5 text-xs text-slate-500">لم تتغيّر عن القياس السابق</p>;
+            const rounded = Math.round(Math.abs(diff) * 100) / 100;
+            return (
+              <p className="mt-1.5 flex items-center gap-1.5 text-xs">
+                <span className="text-slate-500">السابق</span>
+                <span className="text-slate-500 line-through" dir="ltr">{prev.value}</span>
+                <span className="font-bold text-slate-700" dir="ltr">{diff > 0 ? "↑" : "↓"} {rounded}</span>
+              </p>
+            );
+          })()}
           <p className="mt-2 text-xs leading-5 text-slate-500">المدى المرجعي: {referenceRange ?? "غير مذكور في التقرير"}</p>
         </div>
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${className}`} title={trend}>
@@ -69,19 +87,10 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
       <div className="mt-5 border-t border-dashed border-slate-200 pt-3 text-xs font-medium text-slate-500">
         آخر قياس: <span className="font-bold text-slate-700">{examDate}</span>
       </div>
-      <div className="mt-3" aria-label="آخر خمس قياسات من الأقدم إلى الأحدث">
-        <div className="flex items-center justify-between gap-2"><span className="text-[11px] font-extrabold text-slate-600">آخر {Math.min(lastFive.length, 5)} نتائج — من الأقدم إلى الأحدث</span><span className="text-[10px] text-slate-400">{history.length} قياسات</span></div>
-        <div className="mt-2 grid grid-cols-5 gap-1.5">
-          {Array.from({ length: 5 }).map((_, index) => {
-            const item = lastFive[index];
-            const isCurrent = index === lastFive.length - 1;
-            return <div key={item?.examDate ?? `empty-${index}`} className={`min-w-0 rounded-lg px-1 py-2 text-center ${isCurrent ? "bg-teal-800 text-white" : item ? "bg-teal-50 text-teal-950" : "bg-slate-50 text-slate-300"}`}>
-              <p className="truncate text-xs font-extrabold">{item?.value ?? "—"}</p>
-              <p className={`mt-1 truncate text-[9px] ${isCurrent ? "text-teal-100" : "text-slate-400"}`}>{item ? item.examDate.slice(2) : ""}</p>
-            </div>;
-          })}
-        </div>
+      <div className="mt-4">
+        <MetricTrendChart history={history} referenceRange={referenceRange} status={status} compact />
       </div>
+
       <div className={`mt-4 flex gap-2.5 rounded-xl border px-3 py-2.5 ${interpretationStyle.className}`}>
         <InterpretationIcon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div><p className="text-xs font-extrabold">{interpretation.label}</p><p className="mt-0.5 text-[11px] leading-5 opacity-80">{interpretation.detail}</p></div>

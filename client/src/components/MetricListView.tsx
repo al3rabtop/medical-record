@@ -13,6 +13,7 @@ type Row = {
   referenceRange: string | null;
   examDate: string;
   status: MedicalStatus;
+  history: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
 };
 
 export function MetricListView({
@@ -56,6 +57,14 @@ export function MetricListView({
                   <td className="px-4 py-3 font-extrabold text-slate-950" dir="ltr">
                     {card.value}
                     {card.unit ? <span className="text-xs font-semibold text-slate-500"> {card.unit}</span> : null}
+                    {card.history.length > 1 && (
+                      <span className="mt-0.5 block text-[10px] font-semibold text-slate-400">
+                        {card.history
+                          .slice(-3)
+                          .map(h => h.value)
+                          .join(" ← ")}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-500" dir="ltr">
                     {card.referenceRange ?? "—"}
