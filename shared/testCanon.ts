@@ -26,7 +26,7 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   mcv: ["متوسط حجم الكرية", "متوسط حجم الخلية", "متوسط حجم خلايا الدم الحمراء", "متوسط حجم كريات الدم", "mcv", "meancorpuscularvolume"],
   mch: ["متوسط هيموغلوبين الكرية", "متوسط محتوى الهيموجلوبين", "متوسط الهيموجلوبين في الكرية", "متوسط وزن الهيموجلوبين", "متوسط كتلة الهيموجلوبين", "متوسط محتوى الهيموجلوبين في الكرية", "mch", "meancorpuscularhemoglobin"],
   mchc: ["تركيز هيموغلوبين الكرية", "تركيز الهيموجلوبين الخلوي المتوسط", "متوسط تركيز الهيموجلوبين", "تركيز الهيموجلوبين في الكرية", "تركيز الهيموجلوبين المتوسط في الكرية", "mchc"],
-  rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "rdw"],
+  rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "توزيع عرض خلايا الدم", "rdw"],
   neutrophils: ["العدلات", "النيتروفيل", "الخلايا المتعادلة", "المتعادلات", "الخلايا المتعددة النوى", "neutrophils", "neut"],
   lymphocytes: ["الخلايا اللمفاوية", "اللمفاويات", "الليمفوسيت", "الليمفوسيتات", "الليمفوسيت النسبة", "الليمفوسيت العدد", "الليمفوسيتات العدد المطلق", "لمفاويات", "lymphocytes", "lym"],
   monocytes: ["الوحيدات", "الأحادية", "الخلايا الأحادية", "الخلايا الأحادية العدد المطلق", "الخلايا أحادية النوى", "monocytes", "mono"],
@@ -39,13 +39,13 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   total_cholesterol: ["الكوليسترول الكلي", "كوليسترول كلي", "totalcholesterol", "cholesterol"],
   ldl: ["الكوليسترول الضار", "كوليسترول البروتين الدهني منخفض الكثافة", "ldl", "ldlcholesterol"],
   hdl: ["الكوليسترول النافع", "كوليسترول البروتين الدهني عالي الكثافة", "hdl", "hdlcholesterol"],
-  cholesterol_hdl_ratio: ["نسبة الكوليسترول لـ hdl", "نسبة الكوليسترول الى hdl", "نسبة الكوليسترول للـhdl", "cholesterolhdlratio", "tcholhdlratio"],
+  cholesterol_hdl_ratio: ["نسبة الكوليسترول لـ hdl", "نسبة الكوليسترول الى hdl", "نسبة الكوليسترول إلى hdl", "نسبة الكوليسترول للـhdl", "cholesterolhdlratio", "tcholhdlratio"],
   triglycerides: ["الدهون الثلاثية", "triglycerides", "tg"],
 
   hba1c: ["السكر التراكمي", "الهيموجلوبين السكري", "hba1c", "a1c", "glycatedhemoglobin"],
   glucose: ["سكر الدم الصائم", "الجلوكوز", "glucose", "fbg", "fastingglucose"],
 
-  tsh: ["الهرمون المنبه للغدة الدرقية", "الهرمون المنبه للدرقية", "الهرمون المنشط للغدة الدرقية", "tsh", "thyroidstimulatinghormone", "thyrotropin"],
+  tsh: ["الهرمون المنبه للغدة الدرقية", "الهرمون المنبه للدرقية", "الهرمون المنشط للغدة الدرقية", "هرمون تحفيز الغدة الدرقية", "tsh", "thyroidstimulatinghormone", "thyrotropin"],
   total_t3: ["t3 الكلي", "totalt3", "t3"],
   total_t4: ["t4 الكلي", "totalt4", "t4"],
   free_t4: ["ft4", "freet4"],
@@ -70,8 +70,8 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   bilirubin_direct: ["البيليروبين المباشر", "directbilirubin"],
   ggt: ["جاما جلوتاميل ترانسفيراز", "gammagt", "ggt", "gammaglutamyltransferase"],
   albumin: ["الألبومين", "albumin", "albuminserum"],
-  albumin_globulin_ratio: ["نسبة الألبومين للجلوبيولين", "نسبة الالبومين للجلوبيولين", "albuminglobulinratio", "agratio"],
-  globulin: ["الغلوبولين", "الجلوبيولين", "globulin"],
+  albumin_globulin_ratio: ["نسبة الألبومين للجلوبيولين", "نسبة الالبومين للجلوبيولين", "نسبة الألبومين إلى الجلوبيولين", "نسبة الألبومين إلى الغلوبيولين", "albuminglobulinratio", "agratio"],
+  globulin: ["الغلوبولين", "الجلوبيولين", "الغلوبيولين", "globulin"],
   total_protein: ["البروتين الكلي", "totalprotein"],
 
   inr: ["inr", "internationalnormalizedratio"],
@@ -83,10 +83,10 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   magnesium: ["الماغنيسيوم", "المغنيسيوم", "magnesium", "mg"],
   cpk: ["كرياتين فوسفوكاينيز", "cpk", "creatinephosphokinase"],
 
-  urine_wbc: ["كريات الدم البيضاء في البول", "uwbc", "urinewbc"],
-  urine_rbc: ["كريات الدم الحمراء في البول", "urbc", "urinerbc"],
-  urine_protein: ["بروتين البول", "urineprotein"],
-  urine_glucose: ["جلوكوز البول", "urineglucose"],
+  urine_wbc: ["كريات الدم البيضاء في البول", "الكريات البيضاء في البول", "خلايا الدم البيضاء في البول", "uwbc", "urinewbc"],
+  urine_rbc: ["كريات الدم الحمراء في البول", "الكريات الحمراء في البول", "خلايا الدم الحمراء في البول", "urbc", "urinerbc"],
+  urine_protein: ["بروتين البول", "البروتين في البول", "urineprotein"],
+  urine_glucose: ["جلوكوز البول", "الجلوكوز في البول", "urineglucose"],
   urine_ph: ["الحموضة", "urineph", "ph"],
   urine_specific_gravity: ["الكثافة النوعية", "specificgravity", "spgravity"],
 
@@ -150,12 +150,35 @@ export function resolveTestCodeDetailed(label: string, abbr?: string | null): Te
   // false substring merges by their own exact aliases above, matched before
   // this loop ever runs — so a plain differential-percentage label like
   // "النيتروفيل النسبة" is still free to merge with its base test.
-  // Only check "does the label CONTAIN a known alias" — never the reverse
-  // ("is the label contained in some long alias"), which would let a short
-  // generic label like "الهيموجلوبين" false-match inside an unrelated long
-  // compound alias like "متوسط تركيز الهيموجلوبين" (MCHC's full name).
+  // Substring containment: does the label CONTAIN a known alias?
+  // A general specimen guard runs first: if the label marks itself as a
+  // urine specimen (e.g. "خلايا الدم الحمراء في البول"), it must never
+  // fall through to a same-named BLOOD test's code via substring — that
+  // would silently overwrite the blood result with the urine one. Only an
+  // exact urine_* alias (checked above) or no match at all is safe here.
+  const isUrineSpecimen = /في البول|بالبول|في الادرار|urine/.test(normLabel);
+
+  // General cross-test-ratio guard: if the label says "نسبة" (ratio/percentage)
+  // AND it substring-matches two or more DIFFERENT tests (e.g. "نسبة
+  // الكرياتينين للألبومين" mentions both creatinine and albumin), that is a
+  // distinct ratio test, not either ingredient alone — resolving it via
+  // substring to either one would silently overwrite that test's real value.
+  // A single-entity percentage like "النيتروفيل النسبة" only matches one
+  // code and is unaffected.
+  if (normLabel.includes(norm("نسبة"))) {
+    const distinctHits = new Set<string>();
+    for (const [aliasNorm, code] of ALIASES_BY_LENGTH) {
+      if (aliasNorm.length < 4) continue;
+      if (normLabel.includes(aliasNorm)) distinctHits.add(code);
+    }
+    if (distinctHits.size > 1) {
+      return { code: fallbackSlug(label), matched: false };
+    }
+  }
+
   for (const [aliasNorm, code] of ALIASES_BY_LENGTH) {
     if (aliasNorm.length < 4) continue;
+    if (isUrineSpecimen && !code.startsWith("urine_")) continue;
     if (normLabel.includes(aliasNorm)) {
       return { code, matched: true };
     }

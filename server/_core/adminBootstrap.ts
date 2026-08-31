@@ -47,6 +47,10 @@ export function registerAdminBootstrapRoute(app: Express) {
         patientName: patientName || null,
         birthYear,
         role: "admin",
+        // This endpoint exists to bootstrap a usable admin account, so it
+        // must always come out active — never left on the schema's
+        // 'pending' default, which would lock the first admin out entirely.
+        status: "active",
         lastSignedIn: new Date(),
       });
       created = true;
