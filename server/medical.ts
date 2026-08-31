@@ -293,3 +293,110 @@ export async function deleteVisitForUser(userId: number, visitId: number) {
 
   return { deleted: true, visitId };
 }
+
+/** Updates values on an existing result, but only within a visit this user owns. */
+export async function updateResultForUser(
+  userId: number,
+  resultId: number,
+  patch: {
+    label?: string;
+    value?: string;
+    numericValue?: number | null;
+    unit?: string | null;
+    referenceRange?: string | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const owned = await db
+    .select({ id: medicalResults.id, visitId: medicalResults.visitId })
+    .from(medicalResults)
+    .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
+    .where(and(eq(medicalResults.id, resultId), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  if (owned.length === 0) {
+    throw new Error("النتيجة غير موجودة أو لا تملك صلاحية تعديلها.");
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (patch.label !== undefined) updates.label = patch.label.trim().slice(0, 160);
+  if (patch.value !== undefined) updates.valueText = patch.value.trim().slice(0, 80);
+  if (patch.unit !== undefined) updates.unit = patch.unit?.trim().slice(0, 32) || null;
+  if (patch.referenceRange !== undefined) {
+    updates.referenceRange = patch.referenceRange?.trim().slice(0, 80) || null;
+  }
+  if (patch.numericValue !== undefined) {
+    updates.numericValue = patch.numericValue !== null ? String(patch.numericValue) : null;
+  }
+
+  // Status is always recomputed so an edited value can never keep a stale flag.
+  if (patch.numericValue !== undefined || patch.referenceRange !== undefined) {
+    const current = await db
+      .select({
+        numericValue: medicalResults.numericValue,
+        referenceRange: medicalResults.referenceRange,
+      })
+      .from(medicalResults)
+      .where(eq(medicalResults.id, resultId))
+      .limit(1);
+
+    const nextNumeric =
+      patch.numericValue !== undefined
+        ? patch.numericValue
+        : current[0]?.numericValue !== null && current[0]?.numericValue !== undefined
+          ? Number(current[0].numericValue)
+          : null;
+    const nextRange =
+      patch.referenceRange !== undefined ? patch.referenceRange : current[0]?.referenceRange ?? null;
+
+    updates.status = deriveStatus(nextNumeric, nextRange);
+  }
+
+  if (Object.keys(updates).length === 0) return { updated: false };
+
+  await db.update(medicalResults).set(updates).where(eq(medicalResults.id, resultId));
+
+  // Keep the visit's abnormal counter consistent with its results.
+  const siblings = await db
+    .select({ status: medicalResults.status })
+    .from(medicalResults)
+    .where(eq(medicalResults.visitId, owned[0].visitId));
+
+  await db
+    .update(medicalVisits)
+    .set({ abnormalCount: siblings.filter(r => r.status === "follow_up").length })
+    .where(eq(medicalVisits.id, owned[0].visitId));
+
+  return { updated: true };
+}
+
+/** Returns every result inside a visit the user owns, for editing. */
+export async function getVisitResultsForUser(userId: number, visitId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const owned = await db
+    .select({ id: medicalVisits.id })
+    .from(medicalVisits)
+    .where(and(eq(medicalVisits.id, visitId), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  if (owned.length === 0) throw new Error("السجل غير موجود.");
+
+  return db
+    .select({
+      id: medicalResults.id,
+      label: medicalResults.label,
+      category: medicalResults.category,
+      valueText: medicalResults.valueText,
+      numericValue: medicalResults.numericValue,
+      unit: medicalResults.unit,
+      referenceRange: medicalResults.referenceRange,
+      status: medicalResults.status,
+    })
+    .from(medicalResults)
+    .where(eq(medicalResults.visitId, visitId))
+    .orderBy(asc(medicalResults.id));
+}

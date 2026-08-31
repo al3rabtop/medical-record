@@ -5,6 +5,7 @@ import { RecordCard } from "@/components/RecordCard";
 import { formatMedicalDate } from "@/lib/medical-ui";
 import { trpc } from "@/lib/trpc";
 import { Dna, Link2 } from "lucide-react";
+import { EmptyPortal } from "@/components/EmptyPortal";
 
 export default function Pathology() {
   const dashboard = trpc.medical.dashboard.useQuery();

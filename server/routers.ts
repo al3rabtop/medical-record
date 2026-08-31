@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser } from "./medical";
+import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser } from "./medical";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -102,6 +102,24 @@ export const appRouter = router({
           });
         }
         return saveReviewedReport(ctx.user.id, input);
+      }),
+    visitResults: protectedProcedure
+      .input(z.object({ visitId: z.number().int().positive() }))
+      .query(({ ctx, input }) => getVisitResultsForUser(ctx.user.id, input.visitId)),
+    updateResult: protectedProcedure
+      .input(
+        z.object({
+          resultId: z.number().int().positive(),
+          label: z.string().min(1).optional(),
+          value: z.string().min(1).optional(),
+          numericValue: z.number().nullable().optional(),
+          unit: z.string().nullable().optional(),
+          referenceRange: z.string().nullable().optional(),
+        })
+      )
+      .mutation(({ ctx, input }) => {
+        const { resultId, ...patch } = input;
+        return updateResultForUser(ctx.user.id, resultId, patch);
       }),
     deleteVisit: protectedProcedure
       .input(z.object({ visitId: z.number().int().positive() }))
