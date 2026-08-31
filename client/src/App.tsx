@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ProfileProvider } from "./contexts/ProfileContext";
 import Profiles from "./pages/Profiles";
+import Report from "./pages/Report";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
@@ -48,6 +49,12 @@ function Router() {
       </Route>
       <Route path={"/timeline"}>
         <RequireAuth><Timeline /></RequireAuth>
+      </Route>
+      <Route path={"/profiles"}>
+        <RequireAuth><Profiles /></RequireAuth>
+      </Route>
+      <Route path={"/report"}>
+        <RequireAuth><Report /></RequireAuth>
       </Route>
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
