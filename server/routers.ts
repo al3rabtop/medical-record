@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser } from "./medical";
+import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser, checkDuplicateReport, mergeIntoVisit } from "./medical";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -122,6 +122,41 @@ export const appRouter = router({
       .mutation(({ ctx, input }) => {
         const { resultId, ...patch } = input;
         return updateResultForUser(ctx.user.id, resultId, patch);
+      }),
+    checkDuplicate: protectedProcedure
+      .input(
+        z.object({
+          examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          results: z.array(z.object({ label: z.string(), value: z.string() })),
+        })
+      )
+      .mutation(({ ctx, input }) =>
+        checkDuplicateReport(ctx.user.id, input.examDate, input.results)
+      ),
+    mergeReport: protectedProcedure
+      .input(
+        z.object({
+          visitId: z.number().int().positive(),
+          updateChanged: z.boolean(),
+          results: z.array(
+            z.object({
+              label: z.string().min(1),
+              category: z.string(),
+              value: z.string().min(1),
+              numericValue: z.number().nullable(),
+              unit: z.string().nullable(),
+              referenceRange: z.string().nullable(),
+              abbr: z.string().nullable().optional(),
+              about: z.string().nullable().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(({ ctx, input }) => {
+        if (!ctx.user.canUpload) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "تم إيقاف رفع التقارير لهذا الحساب." });
+        }
+        return mergeIntoVisit(ctx.user.id, input.visitId, input.results, input.updateChanged);
       }),
     deleteVisit: protectedProcedure
       .input(z.object({ visitId: z.number().int().positive() }))

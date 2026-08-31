@@ -405,3 +405,176 @@ export async function getVisitResultsForUser(userId: number, visitId: number) {
     .where(eq(medicalResults.visitId, visitId))
     .orderBy(asc(medicalResults.id));
 }
+
+export type DuplicateCheckResult = {
+  status: "new" | "exact_duplicate" | "partial";
+  visitId: number | null;
+  examDate: string;
+  existingCount: number;
+  /** Tests in the upload that are not yet recorded for this date. */
+  newLabels: string[];
+  /** Tests already recorded with the same value — nothing to do. */
+  identicalLabels: string[];
+  /** Tests already recorded but with a different value; the user decides. */
+  changed: Array<{ label: string; oldValue: string; newValue: string }>;
+};
+
+/**
+ * Compares an extracted report against what is already stored for the same
+ * exam date, so a re-upload never silently duplicates or overwrites history.
+ */
+export async function checkDuplicateReport(
+  userId: number,
+  examDate: string,
+  results: Array<{ label: string; value: string }>
+): Promise<DuplicateCheckResult> {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const visits = await db
+    .select({ id: medicalVisits.id })
+    .from(medicalVisits)
+    .where(and(eq(medicalVisits.userId, userId), eq(medicalVisits.examDate, examDate)))
+    .limit(1);
+
+  if (visits.length === 0) {
+    return {
+      status: "new",
+      visitId: null,
+      examDate,
+      existingCount: 0,
+      newLabels: results.map(r => r.label),
+      identicalLabels: [],
+      changed: [],
+    };
+  }
+
+  const visitId = visits[0].id;
+  const existing = await db
+    .select({ label: medicalResults.label, valueText: medicalResults.valueText })
+    .from(medicalResults)
+    .where(eq(medicalResults.visitId, visitId));
+
+  const norm = (v: string) => v.trim().toLowerCase();
+  const byLabel = new Map(existing.map(e => [norm(e.label), e.valueText]));
+
+  const newLabels: string[] = [];
+  const identicalLabels: string[] = [];
+  const changed: DuplicateCheckResult["changed"] = [];
+
+  for (const r of results) {
+    const prior = byLabel.get(norm(r.label));
+    if (prior === undefined) {
+      newLabels.push(r.label);
+    } else if (norm(prior) === norm(r.value)) {
+      identicalLabels.push(r.label);
+    } else {
+      changed.push({ label: r.label, oldValue: prior, newValue: r.value });
+    }
+  }
+
+  return {
+    status: newLabels.length === 0 && changed.length === 0 ? "exact_duplicate" : "partial",
+    visitId,
+    examDate,
+    existingCount: existing.length,
+    newLabels,
+    identicalLabels,
+    changed,
+  };
+}
+
+/** Adds results to an existing visit, optionally updating ones that changed. */
+export async function mergeIntoVisit(
+  userId: number,
+  visitId: number,
+  results: ReviewedResult[],
+  updateChanged: boolean
+) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const owned = await db
+    .select({ id: medicalVisits.id })
+    .from(medicalVisits)
+    .where(and(eq(medicalVisits.id, visitId), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  if (owned.length === 0) throw new Error("السجل غير موجود أو لا تملك صلاحية تعديله.");
+
+  const existing = await db
+    .select({
+      id: medicalResults.id,
+      code: medicalResults.code,
+      label: medicalResults.label,
+      valueText: medicalResults.valueText,
+    })
+    .from(medicalResults)
+    .where(eq(medicalResults.visitId, visitId));
+
+  const norm = (v: string) => v.trim().toLowerCase();
+  const byLabel = new Map(existing.map(e => [norm(e.label), e]));
+  const usedCodes = new Set(existing.map(e => e.code));
+
+  let added = 0;
+  let updated = 0;
+
+  for (const r of results) {
+    const status = deriveStatus(r.numericValue, r.referenceRange);
+    const prior = byLabel.get(norm(r.label));
+
+    if (prior) {
+      if (!updateChanged || norm(prior.valueText) === norm(r.value)) continue;
+      await db
+        .update(medicalResults)
+        .set({
+          valueText: r.value.slice(0, 80),
+          numericValue: r.numericValue !== null ? String(r.numericValue) : null,
+          unit: r.unit ? r.unit.slice(0, 32) : null,
+          referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
+          status,
+        })
+        .where(eq(medicalResults.id, prior.id));
+      updated++;
+      continue;
+    }
+
+    const base =
+      r.label.trim().toLowerCase().replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) ||
+      "result";
+    let code = base;
+    let i = 2;
+    while (usedCodes.has(code)) code = `${base}_${i++}`;
+    usedCodes.add(code);
+
+    await db.insert(medicalResults).values({
+      visitId,
+      code,
+      label: r.label.slice(0, 160),
+      category: (r.category || "أخرى").slice(0, 80),
+      numericValue: r.numericValue !== null ? String(r.numericValue) : null,
+      valueText: r.value.slice(0, 80),
+      unit: r.unit ? r.unit.slice(0, 32) : null,
+      referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
+      abbr: r.abbr ? r.abbr.slice(0, 120) : null,
+      about: r.about ? r.about.slice(0, 400) : null,
+      status,
+    });
+    added++;
+  }
+
+  const all = await db
+    .select({ status: medicalResults.status })
+    .from(medicalResults)
+    .where(eq(medicalResults.visitId, visitId));
+
+  await db
+    .update(medicalVisits)
+    .set({
+      testCount: all.length,
+      abnormalCount: all.filter(r => r.status === "follow_up").length,
+    })
+    .where(eq(medicalVisits.id, visitId));
+
+  return { added, updated, total: all.length };
+}

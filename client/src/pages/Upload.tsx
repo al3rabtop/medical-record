@@ -42,10 +42,28 @@ export default function Upload() {
   const [physician, setPhysician] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [truncated, setTruncated] = useState(false);
+  const [dup, setDup] = useState<null | {
+    status: "new" | "exact_duplicate" | "partial";
+    visitId: number | null;
+    examDate: string;
+    existingCount: number;
+    newLabels: string[];
+    identicalLabels: string[];
+    changed: Array<{ label: string; oldValue: string; newValue: string }>;
+  }>(null);
   const [reportKind, setReportKind] = useState<"labs" | "narrative">("labs");
   const [reportType, setReportType] = useState<string | null>(null);
   const [summaryAr, setSummaryAr] = useState("");
   const [clinicalText, setClinicalText] = useState("");
+
+  const checkDup = trpc.medical.checkDuplicate.useMutation({ onError: e => setError(e.message) });
+  const mergeReport = trpc.medical.mergeReport.useMutation({
+    onSuccess: async () => {
+      await utils.medical.invalidate();
+      navigate("/labs");
+    },
+    onError: e => setError(e.message),
+  });
 
   const saveReport = trpc.medical.saveReport.useMutation({
     onSuccess: async () => {
@@ -104,7 +122,7 @@ export default function Upload() {
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   }
 
-  function handleSave() {
+  async function handleSave() {
     setError(null);
     if (!examDate) {
       setError("يرجى إدخال تاريخ الفحص");
@@ -117,6 +135,21 @@ export default function Upload() {
         return;
       }
     }
+    if (reportKind === "labs") {
+      const check = await checkDup.mutateAsync({
+        examDate,
+        results: rows.map(r => ({ label: r.label.trim(), value: r.value.trim() })),
+      });
+      if (check.status !== "new") {
+        setDup(check);
+        return;
+      }
+    }
+
+    doSave();
+  }
+
+  function doSave() {
     saveReport.mutate({
       examDate,
       facility: facility.trim() || null,
@@ -135,6 +168,22 @@ export default function Upload() {
         about: r.about,
       })),
     });
+  }
+
+  function payloadFor(labels: string[]) {
+    const wanted = new Set(labels.map(l => l.trim().toLowerCase()));
+    return rows
+      .filter(r => wanted.has(r.label.trim().toLowerCase()))
+      .map(r => ({
+        label: r.label.trim(),
+        category: r.category,
+        value: r.value.trim(),
+        numericValue: r.numericValue,
+        unit: r.unit?.trim() || null,
+        referenceRange: r.referenceRange?.trim() || null,
+        abbr: r.abbr,
+        about: r.about,
+      }));
   }
 
   const lowConfidenceCount = rows.filter(r => r.confidence === "low").length;
@@ -198,6 +247,101 @@ export default function Upload() {
 
         {stage === "review" && (
           <div className="flex flex-col gap-5">
+            {dup && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
+                <p className="text-base font-extrabold text-amber-900">
+                  {dup.status === "exact_duplicate"
+                    ? "هذا التقرير مرفوع مسبقاً"
+                    : "يوجد تقرير بنفس التاريخ"}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-amber-800">
+                  لديك سجل بتاريخ <span className="font-bold" dir="ltr">{dup.examDate}</span> يحتوي
+                  على {dup.existingCount} فحصاً.
+                  {dup.status === "exact_duplicate"
+                    ? " وجميع الفحوصات في هذا الملف موجودة فيه بنفس القيم."
+                    : ""}
+                </p>
+
+                {dup.newLabels.length > 0 && (
+                  <div className="mt-4 rounded-xl bg-white p-3">
+                    <p className="text-sm font-bold text-emerald-800">
+                      {dup.newLabels.length} فحص جديد غير موجود في السجل:
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-slate-600">{dup.newLabels.join("، ")}</p>
+                  </div>
+                )}
+
+                {dup.changed.length > 0 && (
+                  <div className="mt-3 rounded-xl bg-white p-3">
+                    <p className="text-sm font-bold text-amber-800">
+                      {dup.changed.length} فحص موجود بقيمة مختلفة:
+                    </p>
+                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                      {dup.changed.map(c => (
+                        <li key={c.label}>
+                          <span className="font-bold text-slate-800">{c.label}</span>:{" "}
+                          <span dir="ltr">{c.oldValue}</span> ← <span dir="ltr" className="font-bold">{c.newValue}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {dup.identicalLabels.length > 0 && (
+                  <p className="mt-3 text-xs text-amber-700">
+                    {dup.identicalLabels.length} فحص موجود بنفس القيمة وسيتم تجاهله.
+                  </p>
+                )}
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {dup.newLabels.length > 0 && dup.visitId && (
+                    <button
+                      onClick={() => mergeReport.mutate({
+                        visitId: dup.visitId!,
+                        updateChanged: false,
+                        results: payloadFor(dup.newLabels),
+                      })}
+                      disabled={mergeReport.isPending}
+                      className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      {mergeReport.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      أضف الفحوصات الجديدة فقط ({dup.newLabels.length})
+                    </button>
+                  )}
+
+                  {dup.changed.length > 0 && dup.visitId && (
+                    <button
+                      onClick={() => mergeReport.mutate({
+                        visitId: dup.visitId!,
+                        updateChanged: true,
+                        results: payloadFor([...dup.newLabels, ...dup.changed.map(c => c.label)]),
+                      })}
+                      disabled={mergeReport.isPending}
+                      className="rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      حدّث القيم المختلفة أيضاً
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => { setDup(null); setStage("pick"); setRows([]); }}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
+                  >
+                    إلغاء
+                  </button>
+
+                  {dup.status === "partial" && (
+                    <button
+                      onClick={() => { setDup(null); doSave(); }}
+                      className="rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 underline"
+                    >
+                      احفظه كسجل منفصل
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {truncated && (
               <div className="flex items-start gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
