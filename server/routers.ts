@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser, checkDuplicateReport, mergeIntoVisit } from "./medical";
+import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser, checkDuplicateReport, mergeIntoVisit, setFollowUpDate, getReminders } from "./medical";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -215,6 +215,17 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "تم إيقاف رفع التقارير لهذا الحساب." });
         }
         return mergeIntoVisit(ctx.user.id, input.visitId, input.results, input.updateChanged);
+      }),
+    setFollowUpDate: protectedProcedure
+      .input(z.object({ resultId: z.number().int().positive(), followUpDate: z.string().nullable() }))
+      .mutation(({ ctx, input }) => setFollowUpDate(ctx.user.id, input.resultId, input.followUpDate)),
+    reminders: protectedProcedure
+      .input(z.object({ profileId: z.number().int().positive().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const profileId = input?.profileId
+          ? await assertOwnedProfile(ctx.user.id, input.profileId)
+          : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
+        return getReminders(ctx.user.id, profileId);
       }),
     deleteVisit: protectedProcedure
       .input(z.object({ visitId: z.number().int().positive() }))

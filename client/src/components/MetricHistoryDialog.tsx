@@ -5,12 +5,15 @@ import { BarChart3, BookOpen, CalendarDays, CircleAlert, Stethoscope } from "luc
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getTestInfo } from "@shared/testInfo";
 import { MetricTrendChart } from "@/components/MetricTrendChart";
+import { FollowUpReminder } from "@/components/FollowUpReminder";
 
 type MetricHistoryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   card: {
     code: string;
+    resultId: number;
+    followUpDate?: string | null;
     abbr?: string | null;
     about?: string | null;
     label: string;
@@ -46,7 +49,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
         <div className="space-y-5 px-6 py-6 sm:px-8">
           <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-teal-800 p-4 text-white"><p className="text-xs font-bold text-teal-100">أحدث نتيجة</p><p className="mt-1 text-3xl font-extrabold">{card.value}<span className="mr-1 text-xs text-teal-100">{card.unit ?? ""}</span></p><p className="mt-2 text-[11px] text-teal-100">{card.examDate}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">المدى المرجعي</p><p className="mt-2 font-extrabold text-slate-900">{card.referenceRange ?? "غير مذكور"}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">عدد القياسات</p><p className="mt-2 flex items-center gap-2 text-xl font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />{card.history.length}</p></div></div>
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4"><div className="flex gap-2"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-teal-800" /><div><p className="text-sm font-extrabold text-teal-950">{card.interpretation.label}</p><p className="mt-1 text-sm leading-6 text-teal-900/80">{card.interpretation.detail}</p></div></div></div>
-          {card.hasUnitMismatch && <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>القياسات هنا مسجّلة بوحدات مختلفة (مختبرات مختلفة تستخدم وحدات مختلفة أحياناً لنفس الفحص). قارن كل قيمة مع وحدتها الظاهرة، ولا تعتمد على الرقم وحده.</span></div>}<div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />التطور عبر الزمن</h3><div className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><MetricTrendChart history={card.history} referenceRange={card.referenceRange} status={card.status} /></div></div><div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><CalendarDays className="h-4 w-4 text-teal-700" />جميع النتائج المسجلة</h3><MetricHistoryTable history={card.history} /></div>
+          {card.hasUnitMismatch && <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" /><span>القياسات هنا مسجّلة بوحدات مختلفة (مختبرات مختلفة تستخدم وحدات مختلفة أحياناً لنفس الفحص). قارن كل قيمة مع وحدتها الظاهرة، ولا تعتمد على الرقم وحده.</span></div>}<FollowUpReminder resultId={card.resultId} followUpDate={card.followUpDate ?? null} /><div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />التطور عبر الزمن</h3><div className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><MetricTrendChart history={card.history} referenceRange={card.referenceRange} status={card.status} /></div></div><div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><CalendarDays className="h-4 w-4 text-teal-700" />جميع النتائج المسجلة</h3><MetricHistoryTable history={card.history} /></div>
           {(() => {
             const info = getTestInfo(card.code);
             if (!info?.why && !info?.clinical) return null;

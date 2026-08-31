@@ -5,10 +5,12 @@ import { formatMedicalDate } from "@/lib/medical-ui";
 import { ArrowLeft, CircleAlert, Clock3, Dna, FlaskConical, History, ScanLine, Sparkles, Stethoscope } from "lucide-react";
 import { Link } from "wouter";
 import { useProfile } from "@/contexts/ProfileContext";
+import { Bell } from "lucide-react";
 
 export default function Home() {
   const { profileId } = useProfile();
   const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
+  const reminders = trpc.medical.reminders.useQuery(profileId ? { profileId } : undefined);
   if (dashboard.isLoading) return <PortalShell><PortalLoading /></PortalShell>;
   if (dashboard.error || !dashboard.data) return <PortalShell><PortalError /></PortalShell>;
 
@@ -32,6 +34,35 @@ export default function Home() {
         </div>
       </section>
       <section className="container mt-8"><MedicalNotice /></section>
+      {reminders.data && reminders.data.length > 0 && (
+        <section className="container mt-6">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-5 sm:p-6">
+            <h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900">
+              <Bell className="h-4 w-4 text-teal-700" />
+              تذكيرات إعادة الفحص
+            </h3>
+            <div className="mt-4 flex flex-col gap-2">
+              {reminders.data.map(r => (
+                <Link
+                  key={r.resultId}
+                  href="/labs"
+                  className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm transition hover:opacity-80 ${
+                    r.overdue ? "bg-amber-50 text-amber-900" : "bg-teal-50 text-teal-900"
+                  }`}
+                >
+                  <span className="font-bold">{r.label}</span>
+                  <span className="flex items-center gap-2">
+                    {r.overdue && (
+                      <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">فات الموعد</span>
+                    )}
+                    <span dir="ltr" className="font-bold">{r.followUpDate}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       <section className="container mt-12">
         <div><p className="section-kicker">بوابات السجل</p><h2 className="section-title">اختر ما تريد مراجعته</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">لم تعد التقارير مخفية داخل قائمة واحدة؛ لكل نوع بوابة مستقلة وتصنيف واضح.</p></div>
         <div className="mt-6 grid gap-4 sm:grid-cols-2">

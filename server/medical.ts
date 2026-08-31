@@ -11,8 +11,10 @@ export type ResultCard = {
   value: string;
   unit: string | null;
   referenceRange: string | null;
+  resultId: number;
   abbr: string | null;
   about: string | null;
+  followUpDate: string | null;
   examDate: string;
   status: MedicalStatus;
   trend: ReturnType<typeof deriveTrend>;
@@ -53,6 +55,7 @@ export async function getMedicalRecordsForUser(userId: number, profileId?: numbe
       referenceRange: medicalResults.referenceRange,
       abbr: medicalResults.abbr,
       about: medicalResults.about,
+      followUpDate: medicalResults.followUpDate,
       status: medicalResults.status,
       examDate: medicalVisits.examDate,
     })
@@ -69,8 +72,10 @@ export function makeResultCards(
     code: string;
     label: string;
     category: string;
+    id: number;
     abbr?: string | null;
     about?: string | null;
+    followUpDate?: string | null;
     numericValue: string | null;
     valueText: string;
     unit: string | null;
@@ -103,8 +108,10 @@ export function makeResultCards(
         value: latest.valueText,
         unit: latest.unit,
         referenceRange: latest.referenceRange,
+        resultId: latest.id,
         abbr: latest.abbr ?? null,
         about: latest.about ?? null,
+        followUpDate: latest.followUpDate ?? null,
         examDate: latest.examDate,
         status: latest.status,
         trend: deriveTrend(currentValue, previousValue),
@@ -599,4 +606,80 @@ export async function mergeIntoVisit(
     .where(eq(medicalVisits.id, visitId));
 
   return { added, updated, total: all.length };
+}
+
+
+/** Sets or clears a follow-up reminder date on a user's own result. */
+export async function setFollowUpDate(
+  userId: number,
+  resultId: number,
+  followUpDate: string | null
+) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  if (followUpDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(followUpDate)) {
+    throw new Error("تاريخ غير صالح.");
+  }
+
+  const owned = await db
+    .select({ id: medicalResults.id })
+    .from(medicalResults)
+    .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
+    .where(and(eq(medicalResults.id, resultId), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  if (owned.length === 0) {
+    throw new Error("النتيجة غير موجودة أو لا تملك صلاحية تعديلها.");
+  }
+
+  await db
+    .update(medicalResults)
+    .set({ followUpDate })
+    .where(eq(medicalResults.id, resultId));
+
+  return { updated: true };
+}
+
+/** Every reminder a user set, across all their tests, soonest first. Overdue ones sort first. */
+export async function getReminders(userId: number, profileId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const scope = profileId
+    ? and(eq(medicalVisits.userId, userId), eq(medicalVisits.profileId, profileId))
+    : eq(medicalVisits.userId, userId);
+
+  const rows = await db
+    .select({
+      resultId: medicalResults.id,
+      code: medicalResults.code,
+      label: medicalResults.label,
+      followUpDate: medicalResults.followUpDate,
+      examDate: medicalVisits.examDate,
+    })
+    .from(medicalResults)
+    .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
+    .where(scope);
+
+  // Keep only each code's most recent result (older reminders are stale once
+  // a newer measurement for the same test exists).
+  const latestByCode = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) {
+    const existing = latestByCode.get(r.code);
+    if (!existing || r.examDate > existing.examDate) latestByCode.set(r.code, r);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return Array.from(latestByCode.values())
+    .filter(r => r.followUpDate !== null)
+    .map(r => ({
+      resultId: r.resultId,
+      code: r.code,
+      label: r.label,
+      followUpDate: r.followUpDate as string,
+      overdue: (r.followUpDate as string) < today,
+    }))
+    .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate));
 }

@@ -91,6 +91,8 @@ export const medicalResults = mysqlTable("medicalResults", {
   referenceRange: varchar("referenceRange", { length: 80 }),
   /** Scientific/English short name, shown for clinicians. */
   abbr: varchar("abbr", { length: 120 }),
+  /** Optional follow-up date the user recorded from their doctor's guidance. */
+  followUpDate: varchar("followUpDate", { length: 10 }),
   /** One-line plain-Arabic explanation of what this test measures. */
   about: varchar("about", { length: 400 }),
   status: mysqlEnum("status", ["reassuring", "follow_up", "unavailable"]).notNull().default("unavailable"),

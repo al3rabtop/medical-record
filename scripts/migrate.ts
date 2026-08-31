@@ -152,6 +152,7 @@ async function main() {
         referenceRange VARCHAR(80),
         abbr VARCHAR(120),
         about VARCHAR(400),
+        followUpDate VARCHAR(10),
         status ENUM('reassuring','follow_up','unavailable') NOT NULL DEFAULT 'unavailable',
         note TEXT,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -249,6 +250,14 @@ async function main() {
          SET v.profileId = p.id
          WHERE v.profileId IS NULL`
       );
+    }
+  }
+
+  // --- medicalResults.followUpDate: user-set re-check reminder
+  if (await tableExists(conn, "medicalResults")) {
+    if (!(await columnExists(conn, "medicalResults", "followUpDate"))) {
+      console.log("[migrate] Adding medicalResults.followUpDate...");
+      await conn.query(`ALTER TABLE medicalResults ADD COLUMN followUpDate VARCHAR(10) NULL`);
     }
   }
 
