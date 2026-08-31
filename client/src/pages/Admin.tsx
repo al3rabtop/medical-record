@@ -1,7 +1,7 @@
 import { PortalShell } from "@/components/PortalShell";
 import { PortalError, PortalLoading } from "@/components/PortalState";
 import { trpc } from "@/lib/trpc";
-import { Activity, FileText, Users } from "lucide-react";
+import { Activity, Clock, FileText, Users } from "lucide-react";
 import { AdminUserRow, type AdminUser } from "@/components/AdminUserRow";
 
 function fmt(d: string | Date | null) {
@@ -30,8 +30,16 @@ export default function Admin() {
           نظرة عامة على الحسابات والنشاط. لا تتضمّن هذه اللوحة أي نتائج طبية — السجل الطبي لكل حساب يبقى خاصاً بصاحبه.
         </p>
 
-        <div className="mb-8 grid gap-3 sm:grid-cols-3">
+        {totals.pending > 0 && (
+          <div className="mb-5 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+            <Clock className="h-4 w-4 shrink-0" />
+            {totals.pending} حساب بانتظار التفعيل — تجده في أعلى القائمة.
+          </div>
+        )}
+
+        <div className="mb-8 grid gap-3 sm:grid-cols-4">
           <StatBox Icon={Users} label="عدد الحسابات" value={totals.users} />
+          <StatBox Icon={Clock} label="قيد المراجعة" value={totals.pending} />
           <StatBox Icon={FileText} label="إجمالي التقارير" value={totals.visits} />
           <StatBox Icon={Activity} label="إجمالي النتائج" value={totals.results} />
         </div>

@@ -10,6 +10,7 @@ export default function Login() {
   const [patientName, setPatientName] = useState("");
   const [birthYear, setBirthYear] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -29,6 +30,12 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "حدث خطأ، حاول مرة أخرى");
+        return;
+      }
+      if (data.pending) {
+        setNotice(data.message);
+        setMode("login");
+        setPassword("");
         return;
       }
       navigate("/");
@@ -114,6 +121,12 @@ export default function Login() {
             />
           </div>
 
+          {notice && (
+            <p className="rounded-xl bg-emerald-50 px-3 py-3 text-sm font-bold leading-6 text-emerald-800">
+              {notice}
+            </p>
+          )}
+
           {error && (
             <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
               {error}
@@ -135,6 +148,7 @@ export default function Login() {
           onClick={() => {
             setMode(mode === "login" ? "signup" : "login");
             setError(null);
+            setNotice(null);
           }}
           className="mt-5 w-full text-center text-sm font-bold text-teal-800 hover:underline"
         >

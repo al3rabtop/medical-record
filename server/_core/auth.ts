@@ -11,6 +11,9 @@ import { ENV } from "./env";
 const isNonEmptyString = (v: unknown): v is string =>
   typeof v === "string" && v.length > 0;
 
+/** When enabled, new accounts must be activated by an admin before first use. */
+const REQUIRE_APPROVAL = process.env.REQUIRE_ADMIN_APPROVAL !== "false";
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getSecretKey() {
@@ -63,8 +66,9 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
 
   const user = await getUserById(userId);
   if (!user) return null;
-  // Suspension takes effect immediately, including for already-issued sessions.
-  if (user.status === "suspended") return null;
+  // Only fully activated accounts hold a valid session; suspension and
+  // pending-approval both take effect immediately for existing sessions too.
+  if (user.status !== "active") return null;
 
   return user;
 }
@@ -120,11 +124,22 @@ export function registerAuthRoutes(app: Express) {
       patientName: patientName.trim(),
       birthYear: year,
       role: "user",
+      status: REQUIRE_APPROVAL ? "pending" : "active",
       lastSignedIn: new Date(),
     });
 
     if (!user) {
       res.status(500).json({ error: "تعذّر إنشاء الحساب" });
+      return;
+    }
+
+    // A pending account gets no session: it cannot be used until an admin activates it.
+    if (user.status === "pending") {
+      res.json({
+        pending: true,
+        message:
+          "تم إنشاء حسابك بنجاح. الحساب قيد المراجعة، وسيتم تفعيله من قِبل المسؤول قريباً.",
+      });
       return;
     }
 
@@ -153,6 +168,13 @@ export function registerAuthRoutes(app: Express) {
 
     if (!user || !passwordMatches) {
       res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
+      return;
+    }
+
+    if (user.status === "pending") {
+      res.status(403).json({
+        error: "حسابك قيد المراجعة ولم يُفعّل بعد. سيتم تفعيله من قِبل المسؤول قريباً.",
+      });
       return;
     }
 

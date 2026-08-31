@@ -20,7 +20,7 @@ export const users = mysqlTable("users", {
   birthYear: int("birthYear"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   /** Suspended accounts cannot sign in, and existing sessions stop working. */
-  status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
+  status: mysqlEnum("status", ["pending", "active", "suspended"]).default("pending").notNull(),
   /** Lets an admin disable report uploads without suspending the whole account. */
   canUpload: boolean("canUpload").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

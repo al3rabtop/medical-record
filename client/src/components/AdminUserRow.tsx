@@ -18,7 +18,7 @@ export type AdminUser = {
   patientName: string | null;
   birthYear: number | null;
   role: "user" | "admin";
-  status: "active" | "suspended";
+  status: "pending" | "active" | "suspended";
   canUpload: boolean;
   createdAt: string | Date;
   lastSignedIn: string | Date;
@@ -63,7 +63,7 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
 
   return (
     <>
-      <tr className={`border-b border-slate-100 ${user.status === "suspended" ? "bg-red-50/40" : ""}`}>
+      <tr className={`border-b border-slate-100 ${user.status === "suspended" ? "bg-red-50/40" : user.status === "pending" ? "bg-amber-50/50" : ""}`}>
         <td className="p-3 font-bold text-slate-800">
           {user.patientName ?? "—"}
           {user.role === "admin" && (
@@ -79,6 +79,9 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
         <td className="p-3 text-slate-500">{fmt(user.lastSignedIn)}</td>
         <td className="p-3">
           <div className="flex flex-wrap gap-1">
+            {user.status === "pending" && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">قيد المراجعة</span>
+            )}
             {user.status === "suspended" && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">موقوف</span>
             )}
@@ -92,6 +95,13 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
         </td>
         <td className="p-3">
           <div className="flex flex-wrap gap-1.5">
+            {user.status === "pending" && (
+              <button onClick={() => setStatus.mutate({ userId: user.id, status: "active" })}
+                disabled={busy}
+                className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                <Check className="h-3.5 w-3.5" />تفعيل الحساب
+              </button>
+            )}
             <button onClick={() => { setMode(mode === "edit" ? "view" : "edit"); setErr(null); }}
               disabled={busy} className={`${btn} text-slate-600 hover:border-teal-300 hover:text-teal-800`}>
               <Pencil className="h-3.5 w-3.5" />تعديل
@@ -106,10 +116,10 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
             </button>
             {!isSelf && (
               <>
-                <button onClick={() => setStatus.mutate({ userId: user.id, status: user.status === "active" ? "suspended" : "active" })}
+                {user.status !== "pending" && <button onClick={() => setStatus.mutate({ userId: user.id, status: user.status === "active" ? "suspended" : "active" })}
                   disabled={busy} className={`${btn} ${user.status === "active" ? "text-slate-600 hover:border-red-300 hover:text-red-700" : "border-emerald-300 bg-emerald-50 text-emerald-800"}`}>
                   <Ban className="h-3.5 w-3.5" />{user.status === "active" ? "حظر" : "إلغاء الحظر"}
-                </button>
+                </button>}
                 <button onClick={() => setRole.mutate({ userId: user.id, role: user.role === "admin" ? "user" : "admin" })}
                   disabled={busy} className={`${btn} text-slate-600 hover:border-teal-300 hover:text-teal-800`}>
                   <ShieldCheck className="h-3.5 w-3.5" />{user.role === "admin" ? "إزالة الإدارة" : "ترقية لمدير"}

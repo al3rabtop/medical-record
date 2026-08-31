@@ -50,7 +50,7 @@ export const appRouter = router({
       .input(
         z.object({
           userId: z.number().int().positive(),
-          status: z.enum(["active", "suspended"]),
+          status: z.enum(["pending", "active", "suspended"]),
         })
       )
       .mutation(({ ctx, input }) => adminSetStatus(ctx.user.id, input.userId, input.status)),

@@ -70,7 +70,7 @@ async function main() {
         patientName VARCHAR(160) NULL,
         birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
-        status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+        status ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
         canUpload BOOLEAN NOT NULL DEFAULT TRUE,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -89,7 +89,7 @@ async function main() {
         patientName VARCHAR(160) NULL,
         birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
-        status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+        status ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending',
         canUpload BOOLEAN NOT NULL DEFAULT TRUE,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -183,7 +183,12 @@ async function main() {
   if (await tableExists(conn, "users")) {
     if (!(await columnExists(conn, "users", "status"))) {
       console.log("[migrate] Adding users.status...");
-      await conn.query(`ALTER TABLE users ADD COLUMN status ENUM('active','suspended') NOT NULL DEFAULT 'active'`);
+      // Pre-existing accounts predate approval gating, so they start active.
+      await conn.query(`ALTER TABLE users ADD COLUMN status ENUM('pending','active','suspended') NOT NULL DEFAULT 'active'`);
+    } else {
+      // Widen the enum in place; existing values are preserved.
+      console.log("[migrate] Ensuring users.status supports 'pending'...");
+      await conn.query(`ALTER TABLE users MODIFY COLUMN status ENUM('pending','active','suspended') NOT NULL DEFAULT 'pending'`);
     }
     if (!(await columnExists(conn, "users", "canUpload"))) {
       console.log("[migrate] Adding users.canUpload...");

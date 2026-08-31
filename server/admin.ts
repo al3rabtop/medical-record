@@ -27,15 +27,17 @@ export async function getAdminOverview() {
       resultCount: sql<number>`(SELECT COUNT(*) FROM medicalResults r JOIN medicalVisits v ON r.visitId = v.id WHERE v.userId = users.id)`,
     })
     .from(users)
-    .orderBy(desc(users.createdAt));
+    // Surface accounts awaiting approval first.
+    .orderBy(sql`FIELD(users.status, 'pending', 'active', 'suspended')`, desc(users.createdAt));
 
   const totals = rows.reduce(
     (acc, r) => ({
       users: acc.users + 1,
+      pending: acc.pending + (r.status === "pending" ? 1 : 0),
       visits: acc.visits + Number(r.visitCount),
       results: acc.results + Number(r.resultCount),
     }),
-    { users: 0, visits: 0, results: 0 }
+    { users: 0, pending: 0, visits: 0, results: 0 }
   );
 
   return {
@@ -150,12 +152,12 @@ export async function adminSetPassword(targetUserId: number, newPassword: string
 export async function adminSetStatus(
   adminUserId: number,
   targetUserId: number,
-  status: "active" | "suspended"
+  status: "pending" | "active" | "suspended"
 ) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
 
-  if (status === "suspended") {
+  if (status !== "active") {
     await assertNotSelf(adminUserId, targetUserId);
     await assertNotLastAdmin(targetUserId);
   }
