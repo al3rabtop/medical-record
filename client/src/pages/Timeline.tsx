@@ -7,9 +7,11 @@ import { trpc } from "@/lib/trpc";
 import type { RecordPortal } from "@shared/medical";
 import { History } from "lucide-react";
 import { useState } from "react";
+import { useProfile } from "@/contexts/ProfileContext";
 
 export default function Timeline() {
-  const dashboard = trpc.medical.dashboard.useQuery();
+  const { profileId } = useProfile();
+  const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const [activePortal, setActivePortal] = useState<"all" | RecordPortal>("all");
   if (dashboard.isLoading) return <PortalShell><PortalLoading /></PortalShell>;
   if (dashboard.error || !dashboard.data) return <PortalShell><PortalError /></PortalShell>;

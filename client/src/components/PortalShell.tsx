@@ -2,6 +2,8 @@ import { HeartPulse, Home, FlaskConical, ScanLine, Stethoscope, Dna, History, Sh
 import { Link, useLocation } from "wouter";
 import type { ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
+import { ProfileSwitcher } from "@/components/ProfileSwitcher";
+import { useProfile } from "@/contexts/ProfileContext";
 
 const navigation = [
   { href: "/", label: "الرئيسية", Icon: Home },
@@ -23,13 +25,14 @@ export function PortalShell({ children }: { children: ReactNode }) {
   const me = trpc.auth.me.useQuery();
   const patientName = me.data?.patientName ?? null;
   const isAdmin = me.data?.role === "admin";
+  const { activeProfile } = useProfile();
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f7f9f7] text-slate-900" dir="rtl">
       <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f7f9f7]/95 backdrop-blur-xl">
         <div className="container flex h-[4.75rem] items-center justify-between gap-4">
           <Link href="/" className="flex shrink-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-800 text-white shadow-[0_8px_20px_-8px_rgba(15,118,110,0.8)]"><HeartPulse className="h-5 w-5" /></span>
-            <span><span className="block text-base font-extrabold tracking-tight text-teal-950">رفيق الصحة</span>{patientName && <span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700">{patientName}</span>}</span>
+            <span><span className="block text-base font-extrabold tracking-tight text-teal-950">رفيق الصحة</span>{(activeProfile?.name ?? patientName) && <span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700">{activeProfile?.name ?? patientName}</span>}</span>
           </Link>
           <nav className="hidden items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 lg:flex" aria-label="بوابات السجل">
             {navigation.map(({ href, label, Icon }) => {
@@ -37,12 +40,12 @@ export function PortalShell({ children }: { children: ReactNode }) {
               return <Link key={href} href={href} className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition ${active ? "bg-teal-800 text-white shadow-sm" : "text-slate-600 hover:bg-teal-50 hover:text-teal-900"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
             })}
           </nav>
-          <div className="hidden items-center gap-2 sm:flex">
+          <div className="hidden items-center gap-2 sm:flex"><ProfileSwitcher />
             <Link href="/upload" className="flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900"><FilePlus2 className="h-4 w-4" />رفع تقرير</Link>
             <Link href="/settings" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="إعدادات الحساب"><Settings className="h-4 w-4" /></Link>{isAdmin && <Link href="/admin" className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="لوحة الإحصائيات"><Shield className="h-4 w-4" /></Link>}<button onClick={handleLogout} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50" title="تسجيل الخروج"><LogOut className="h-4 w-4" /></button>
           </div>
         </div>
-        <nav className="container flex gap-2 overflow-x-auto pb-3 lg:hidden" aria-label="بوابات السجل على الهاتف">
+        <div className="container pb-2 lg:hidden"><ProfileSwitcher /></div><nav className="container flex gap-2 overflow-x-auto pb-3 lg:hidden" aria-label="بوابات السجل على الهاتف">
           {navigation.map(({ href, label, Icon }) => {
             const active = href === "/" ? location === "/" : location.startsWith(href);
             return <Link key={href} href={href} className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold ${active ? "bg-teal-800 text-white" : "border border-slate-200 bg-white text-slate-600"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;

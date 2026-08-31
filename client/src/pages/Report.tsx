@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { getTestInfo } from "@shared/testInfo";
 import { ArrowRight, Printer } from "lucide-react";
 import { useLocation } from "wouter";
+import { useProfile } from "@/contexts/ProfileContext";
 
 /**
  * Print-oriented summary. Rendering in the browser keeps Arabic shaping and
@@ -10,8 +11,9 @@ import { useLocation } from "wouter";
  * without shipping fonts or a PDF engine.
  */
 export default function Report() {
+  const { profileId } = useProfile();
   const [, navigate] = useLocation();
-  const dashboard = trpc.medical.dashboard.useQuery();
+  const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const me = trpc.auth.me.useQuery();
 
   if (dashboard.isLoading) return <PortalLoading />;

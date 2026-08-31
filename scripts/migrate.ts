@@ -198,6 +198,60 @@ async function main() {
     }
   }
 
+  // --- profiles: one per tracked person, with automatic backfill so no
+  // existing record is ever left without an owner.
+  if (!(await tableExists(conn, "profiles"))) {
+    console.log("[migrate] Creating profiles...");
+    await conn.query(`
+      CREATE TABLE profiles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        userId INT NOT NULL,
+        name VARCHAR(160) NOT NULL,
+        relation VARCHAR(64),
+        birthYear INT,
+        isPrimary BOOLEAN NOT NULL DEFAULT FALSE,
+        createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX profiles_userId_idx (userId)
+      ) DEFAULT CHARSET=utf8mb4
+    `);
+  }
+
+  if (await tableExists(conn, "medicalVisits")) {
+    if (!(await columnExists(conn, "medicalVisits", "profileId"))) {
+      console.log("[migrate] Adding medicalVisits.profileId...");
+      await conn.query(`ALTER TABLE medicalVisits ADD COLUMN profileId INT NULL`);
+      await conn.query(`CREATE INDEX medicalVisits_profileId_idx ON medicalVisits(profileId)`);
+    }
+
+    // Give every account a primary profile named after its patient, then
+    // attach that account's existing visits to it.
+    const [accounts] = await conn.query(
+      `SELECT u.id, u.patientName, u.birthYear FROM users u
+       WHERE NOT EXISTS (SELECT 1 FROM profiles p WHERE p.userId = u.id)`
+    );
+    for (const acc of accounts as any[]) {
+      console.log(`[migrate] Creating primary profile for user ${acc.id}...`);
+      await conn.query(
+        `INSERT INTO profiles (userId, name, relation, birthYear, isPrimary)
+         VALUES (?, ?, ?, ?, TRUE)`,
+        [acc.id, acc.patientName || "الملف الرئيسي", "نفسي", acc.birthYear ?? null]
+      );
+    }
+
+    const [orphans] = await conn.query(
+      `SELECT COUNT(*) AS c FROM medicalVisits WHERE profileId IS NULL AND userId IS NOT NULL`
+    );
+    if ((orphans as any)[0].c > 0) {
+      console.log(`[migrate] Attaching ${(orphans as any)[0].c} visits to primary profiles...`);
+      await conn.query(
+        `UPDATE medicalVisits v
+         JOIN profiles p ON p.userId = v.userId AND p.isPrimary = TRUE
+         SET v.profileId = p.id
+         WHERE v.profileId IS NULL`
+      );
+    }
+  }
+
   // --- medicalVisits: narrative report fields
   if (await tableExists(conn, "medicalVisits")) {
     if (!(await columnExists(conn, "medicalVisits", "summaryAr"))) {

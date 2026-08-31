@@ -22,14 +22,19 @@ export type ResultCard = {
 
 const priorityCodes = ["hemoglobin", "ferritin", "total_cholesterol", "ldl", "hba1c", "tsh", "urine_wbc"];
 
-export async function getMedicalRecordsForUser(userId: number) {
+export async function getMedicalRecordsForUser(userId: number, profileId?: number) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  // Scope by profile when given; userId stays in the filter as the security boundary.
+  const scope = profileId
+    ? and(eq(medicalVisits.userId, userId), eq(medicalVisits.profileId, profileId))
+    : eq(medicalVisits.userId, userId);
 
   const visits = await db
     .select()
     .from(medicalVisits)
-    .where(eq(medicalVisits.userId, userId))
+    .where(scope)
     .orderBy(desc(medicalVisits.examDate));
 
   const results = await db
@@ -50,7 +55,7 @@ export async function getMedicalRecordsForUser(userId: number) {
     })
     .from(medicalResults)
     .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
-    .where(eq(medicalVisits.userId, userId))
+    .where(scope)
     .orderBy(desc(medicalVisits.examDate), asc(medicalResults.id));
 
   return { visits, results };
@@ -110,8 +115,8 @@ export function makeResultCards(
     });
 }
 
-export async function getMedicalDashboardForUser(userId: number) {
-  const { visits, results } = await getMedicalRecordsForUser(userId);
+export async function getMedicalDashboardForUser(userId: number, profileId?: number) {
+  const { visits, results } = await getMedicalRecordsForUser(userId, profileId);
   const cards = makeResultCards(results);
   const classifiedVisits = visits.map((visit) => ({
     ...visit,
@@ -204,6 +209,7 @@ export type ReviewedResult = {
 /** Saves a user-reviewed report as a visit plus its results. */
 export async function saveReviewedReport(
   userId: number,
+  profileId: number,
   input: {
     examDate: string;
     facility: string | null;
@@ -227,6 +233,7 @@ export async function saveReviewedReport(
 
   const inserted = await db.insert(medicalVisits).values({
     userId,
+    profileId,
     visitNumber,
     examDate: input.examDate,
     reportDate: input.examDate,
@@ -425,6 +432,7 @@ export type DuplicateCheckResult = {
  */
 export async function checkDuplicateReport(
   userId: number,
+  profileId: number,
   examDate: string,
   results: Array<{ label: string; value: string }>
 ): Promise<DuplicateCheckResult> {
@@ -434,7 +442,11 @@ export async function checkDuplicateReport(
   const visits = await db
     .select({ id: medicalVisits.id })
     .from(medicalVisits)
-    .where(and(eq(medicalVisits.userId, userId), eq(medicalVisits.examDate, examDate)))
+    .where(and(
+      eq(medicalVisits.userId, userId),
+      eq(medicalVisits.profileId, profileId),
+      eq(medicalVisits.examDate, examDate)
+    ))
     .limit(1);
 
   if (visits.length === 0) {

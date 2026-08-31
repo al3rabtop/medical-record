@@ -8,9 +8,11 @@ import type { RadiologyModality } from "@shared/medical";
 import { ScanLine } from "lucide-react";
 import { useMemo, useState } from "react";
 import { EmptyPortal } from "@/components/EmptyPortal";
+import { useProfile } from "@/contexts/ProfileContext";
 
 export default function Radiology() {
-  const dashboard = trpc.medical.dashboard.useQuery();
+  const { profileId } = useProfile();
+  const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const [activeModality, setActiveModality] = useState<"الكل" | RadiologyModality>("الكل");
   const records = useMemo(() => (dashboard.data?.visits ?? []).filter((visit) => visit.portal === "radiology"), [dashboard.data?.visits]);
   const modalities = useMemo(() => Array.from(new Set(records.map((visit) => visit.modality).filter((item): item is RadiologyModality => item !== null))), [records]);

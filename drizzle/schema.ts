@@ -31,11 +31,30 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
+/** A person whose records are tracked: the account owner or a family member. */
+export const profiles = mysqlTable("profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Owning account. Every profile belongs to exactly one user. */
+  userId: int("userId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  /** Relationship to the account owner, e.g. "نفسي", "الوالدة", "ابني". */
+  relation: varchar("relation", { length: 64 }),
+  birthYear: int("birthYear"),
+  /** The profile selected by default when the account signs in. */
+  isPrimary: boolean("isPrimary").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [index("profiles_userId_idx").on(table.userId)]);
+
+export type Profile = typeof profiles.$inferSelect;
+export type InsertProfile = typeof profiles.$inferInsert;
+
 /** Medical events are intentionally date-first, so the timeline never relies on upload time. */
 export const medicalVisits = mysqlTable("medicalVisits", {
   id: int("id").autoincrement().primaryKey(),
   /** Owning account. Nullable temporarily to allow backfilling pre-existing rows. */
   userId: int("userId").references(() => users.id, { onDelete: "cascade" }),
+  /** Which person this record belongs to. Nullable during backfill. */
+  profileId: int("profileId"),
   visitNumber: varchar("visitNumber", { length: 32 }).notNull().unique(),
   examDate: varchar("examDate", { length: 10 }).notNull(),
   reportDate: varchar("reportDate", { length: 10 }),
@@ -56,6 +75,7 @@ export const medicalVisits = mysqlTable("medicalVisits", {
 }, (table) => [
   index("medicalVisits_examDate_idx").on(table.examDate),
   index("medicalVisits_userId_idx").on(table.userId),
+  index("medicalVisits_profileId_idx").on(table.profileId),
 ]);
 
 /** Numeric values are saved where possible, while valueText preserves the original report wording. */

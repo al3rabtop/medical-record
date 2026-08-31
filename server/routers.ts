@@ -6,6 +6,14 @@ import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedRepor
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
+  assertOwnedProfile,
+  createProfile,
+  deleteProfile,
+  getDefaultProfileId,
+  listProfiles,
+  updateProfile,
+} from "./profiles";
+import {
   adminDeleteUser,
   adminSetCanUpload,
   adminSetPassword,
@@ -69,12 +77,55 @@ export const appRouter = router({
       .input(z.object({ userId: z.number().int().positive() }))
       .mutation(({ ctx, input }) => adminDeleteUser(ctx.user.id, input.userId)),
   }),
+  profiles: router({
+    list: protectedProcedure.query(({ ctx }) => listProfiles(ctx.user.id)),
+    create: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().min(2),
+          relation: z.string().nullable(),
+          birthYear: z.number().int().nullable(),
+        })
+      )
+      .mutation(({ ctx, input }) => createProfile(ctx.user.id, input)),
+    update: protectedProcedure
+      .input(
+        z.object({
+          profileId: z.number().int().positive(),
+          name: z.string().min(2).optional(),
+          relation: z.string().nullable().optional(),
+          birthYear: z.number().int().nullable().optional(),
+        })
+      )
+      .mutation(({ ctx, input }) => {
+        const { profileId, ...patch } = input;
+        return updateProfile(ctx.user.id, profileId, patch);
+      }),
+    remove: protectedProcedure
+      .input(z.object({ profileId: z.number().int().positive() }))
+      .mutation(({ ctx, input }) => deleteProfile(ctx.user.id, input.profileId)),
+  }),
   medical: router({
-    dashboard: protectedProcedure.query(({ ctx }) => getMedicalDashboardForUser(ctx.user.id)),
-    timeline: protectedProcedure.query(({ ctx }) => getMedicalRecordsForUser(ctx.user.id)),
+    dashboard: protectedProcedure
+      .input(z.object({ profileId: z.number().int().positive().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const profileId = input?.profileId
+          ? await assertOwnedProfile(ctx.user.id, input.profileId)
+          : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
+        return getMedicalDashboardForUser(ctx.user.id, profileId);
+      }),
+    timeline: protectedProcedure
+      .input(z.object({ profileId: z.number().int().positive().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const profileId = input?.profileId
+          ? await assertOwnedProfile(ctx.user.id, input.profileId)
+          : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
+        return getMedicalRecordsForUser(ctx.user.id, profileId);
+      }),
     saveReport: protectedProcedure
       .input(
         z.object({
+          profileId: z.number().int().positive().optional(),
           examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
           facility: z.string().nullable(),
           physician: z.string().nullable(),
@@ -96,14 +147,17 @@ export const appRouter = router({
           clinicalText: z.string().nullable().optional(),
         })
       )
-      .mutation(({ ctx, input }) => {
+      .mutation(async ({ ctx, input }) => {
         if (!ctx.user.canUpload) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "تم إيقاف رفع التقارير لهذا الحساب.",
           });
         }
-        return saveReviewedReport(ctx.user.id, input);
+        const profileId = input.profileId
+          ? await assertOwnedProfile(ctx.user.id, input.profileId)
+          : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
+        return saveReviewedReport(ctx.user.id, profileId, input);
       }),
     visitResults: protectedProcedure
       .input(z.object({ visitId: z.number().int().positive() }))
@@ -126,13 +180,17 @@ export const appRouter = router({
     checkDuplicate: protectedProcedure
       .input(
         z.object({
+          profileId: z.number().int().positive().optional(),
           examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
           results: z.array(z.object({ label: z.string(), value: z.string() })),
         })
       )
-      .mutation(({ ctx, input }) =>
-        checkDuplicateReport(ctx.user.id, input.examDate, input.results)
-      ),
+      .mutation(async ({ ctx, input }) => {
+        const profileId = input.profileId
+          ? await assertOwnedProfile(ctx.user.id, input.profileId)
+          : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
+        return checkDuplicateReport(ctx.user.id, profileId, input.examDate, input.results);
+      }),
     mergeReport: protectedProcedure
       .input(
         z.object({

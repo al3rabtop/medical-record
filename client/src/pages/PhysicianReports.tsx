@@ -5,9 +5,11 @@ import { RecordCard } from "@/components/RecordCard";
 import { trpc } from "@/lib/trpc";
 import { Stethoscope } from "lucide-react";
 import { EmptyPortal } from "@/components/EmptyPortal";
+import { useProfile } from "@/contexts/ProfileContext";
 
 export default function PhysicianReports() {
-  const dashboard = trpc.medical.dashboard.useQuery();
+  const { profileId } = useProfile();
+  const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   if (dashboard.isLoading) return <PortalShell><PortalLoading /></PortalShell>;
   if (dashboard.error || !dashboard.data) return <PortalShell><PortalError /></PortalShell>;
   const records = dashboard.data.visits.filter((visit) => visit.portal === "physician");

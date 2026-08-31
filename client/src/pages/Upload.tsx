@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useProfile } from "@/contexts/ProfileContext";
 
 type Row = {
   label: string;
@@ -34,6 +35,7 @@ export default function Upload() {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
+  const { profileId, activeProfile } = useProfile();
 
   const [stage, setStage] = useState<"pick" | "loading" | "review">("pick");
   const [error, setError] = useState<string | null>(null);
@@ -137,6 +139,7 @@ export default function Upload() {
     }
     if (reportKind === "labs") {
       const check = await checkDup.mutateAsync({
+        ...(profileId ? { profileId } : {}),
         examDate,
         results: rows.map(r => ({ label: r.label.trim(), value: r.value.trim() })),
       });
@@ -151,6 +154,7 @@ export default function Upload() {
 
   function doSave() {
     saveReport.mutate({
+      ...(profileId ? { profileId } : {}),
       examDate,
       facility: facility.trim() || null,
       physician: physician.trim() || null,
@@ -196,6 +200,11 @@ export default function Upload() {
           ارفع صورة أو ملف PDF للتقرير، وسيتم استخراج النتائج لمراجعتها قبل الحفظ.
           لا يتم حفظ الملف نفسه.
         </p>
+        {activeProfile && (
+          <p className="mb-5 rounded-xl bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-900">
+            سيُحفظ هذا التقرير في ملف: {activeProfile.name}
+          </p>
+        )}
 
         {error && (
           <div className="mb-5 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">

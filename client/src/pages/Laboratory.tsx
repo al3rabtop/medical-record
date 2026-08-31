@@ -9,9 +9,11 @@ import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { trpc } from "@/lib/trpc";
 import { Activity, FlaskConical , LayoutGrid, List , FileDown } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useProfile } from "@/contexts/ProfileContext";
 
 export default function Laboratory() {
-  const dashboard = trpc.medical.dashboard.useQuery();
+  const { profileId } = useProfile();
+  const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const [activeCategory, setActiveCategory] = useState("الكل");
   const [view, setView] = useState<"cards" | "list">(
     () => (typeof window !== "undefined" && window.sessionStorage.getItem("labView") === "list" ? "list" : "cards")
