@@ -7,11 +7,10 @@ describe("MetricHistoryTable", () => {
   it("renders imported historical and recent measurements together", () => {
     const markup = renderToStaticMarkup(
       <MetricHistoryTable
-        unit="g/dL"
         history={[
-          { examDate: "2022-02-01", value: "10.1", status: "follow_up" },
-          { examDate: "2022-04-05", value: "12.1", status: "reassuring" },
-          { examDate: "2026-05-31", value: "11.1", status: "follow_up" },
+          { examDate: "2022-02-01", value: "10.1", unit: "g/dL", status: "follow_up" },
+          { examDate: "2022-04-05", value: "12.1", unit: "g/dL", status: "reassuring" },
+          { examDate: "2026-05-31", value: "11.1", unit: "g/dL", status: "follow_up" },
         ]}
       />,
     );

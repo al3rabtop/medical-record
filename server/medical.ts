@@ -2,6 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import { medicalResults, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
 import { classifyMedicalRecord, deriveTrend, interpretResultTrend, type MedicalStatus, type TrendInterpretation } from "../shared/medical";
+import { resolveTestCode } from "../shared/testCanon";
 
 export type ResultCard = {
   code: string;
@@ -16,8 +17,10 @@ export type ResultCard = {
   status: MedicalStatus;
   trend: ReturnType<typeof deriveTrend>;
   interpretation: TrendInterpretation;
-  lastFive: Array<{ value: string; examDate: string; status: MedicalStatus }>;
-  history: Array<{ value: string; examDate: string; status: MedicalStatus }>;
+  lastFive: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
+  history: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
+  /** True when this test's history mixes more than one unit across labs — flagged, never silently trusted. */
+  hasUnitMismatch: boolean;
 };
 
 const priorityCodes = ["hemoglobin", "ferritin", "total_cholesterol", "ldl", "hba1c", "tsh", "urine_wbc"];
@@ -84,7 +87,15 @@ export function makeResultCards(
       const [latest, ...older] = series;
       const currentValue = latest.numericValue === null ? null : Number(latest.numericValue);
       const previousValue = older[0]?.numericValue === null || older[0] === undefined ? null : Number(older[0].numericValue);
-      const history = [...series].reverse().map((item) => ({ value: item.valueText, examDate: item.examDate, status: item.status }));
+      // Each entry carries its own unit — different labs can report the same
+      // canonical test in different units, and a shared column-wide unit
+      // would silently mislabel older or newer values.
+      const history = [...series].reverse().map((item) => ({
+        value: item.valueText,
+        unit: item.unit,
+        examDate: item.examDate,
+        status: item.status,
+      }));
       return {
         code: latest.code,
         label: latest.label,
@@ -106,6 +117,7 @@ export function makeResultCards(
         }),
         lastFive: history.slice(-5),
         history,
+        hasUnitMismatch: new Set(history.map(h => h.unit ?? "")).size > 1,
       } satisfies ResultCard;
     })
     .sort((a, b) => {
@@ -249,16 +261,13 @@ export async function saveReviewedReport(
 
   const visitId = Number(inserted[0].insertId);
 
-  // Codes must be unique per visit; derive from label and de-duplicate.
+  // Codes are resolved to a canonical form shared across labs (see testCanon),
+  // and de-duplicated only within THIS visit (a visit can't have two rows
+  // with the same code, but the same code across different visits is exactly
+  // how history/trend grouping works).
   const usedCodes = new Set<string>();
   const rows = withStatus.map(r => {
-    const base =
-      r.label
-        .trim()
-        .toLowerCase()
-        .replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, "_")
-        .replace(/^_+|_+$/g, "")
-        .slice(0, 60) || "result";
+    const base = resolveTestCode(r.label, r.abbr);
     let code = base;
     let i = 2;
     while (usedCodes.has(code)) code = `${base}_${i++}`;
@@ -463,19 +472,22 @@ export async function checkDuplicateReport(
 
   const visitId = visits[0].id;
   const existing = await db
-    .select({ label: medicalResults.label, valueText: medicalResults.valueText })
+    .select({ code: medicalResults.code, label: medicalResults.label, valueText: medicalResults.valueText })
     .from(medicalResults)
     .where(eq(medicalResults.visitId, visitId));
 
+  // Match by canonical code, not raw label text, so "TSH" and "الغدة
+  // الدرقية TSH" from different labs are recognised as the same test.
   const norm = (v: string) => v.trim().toLowerCase();
-  const byLabel = new Map(existing.map(e => [norm(e.label), e.valueText]));
+  const byCode = new Map(existing.map(e => [e.code, e.valueText]));
 
   const newLabels: string[] = [];
   const identicalLabels: string[] = [];
   const changed: DuplicateCheckResult["changed"] = [];
 
   for (const r of results) {
-    const prior = byLabel.get(norm(r.label));
+    const code = resolveTestCode(r.label);
+    const prior = byCode.get(code);
     if (prior === undefined) {
       newLabels.push(r.label);
     } else if (norm(prior) === norm(r.value)) {
@@ -525,7 +537,7 @@ export async function mergeIntoVisit(
     .where(eq(medicalResults.visitId, visitId));
 
   const norm = (v: string) => v.trim().toLowerCase();
-  const byLabel = new Map(existing.map(e => [norm(e.label), e]));
+  const byCode = new Map(existing.map(e => [e.code, e]));
   const usedCodes = new Set(existing.map(e => e.code));
 
   let added = 0;
@@ -533,7 +545,8 @@ export async function mergeIntoVisit(
 
   for (const r of results) {
     const status = deriveStatus(r.numericValue, r.referenceRange);
-    const prior = byLabel.get(norm(r.label));
+    const code = resolveTestCode(r.label, r.abbr);
+    const prior = byCode.get(code);
 
     if (prior) {
       if (!updateChanged || norm(prior.valueText) === norm(r.value)) continue;
@@ -551,17 +564,14 @@ export async function mergeIntoVisit(
       continue;
     }
 
-    const base =
-      r.label.trim().toLowerCase().replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) ||
-      "result";
-    let code = base;
+    let finalCode = code;
     let i = 2;
-    while (usedCodes.has(code)) code = `${base}_${i++}`;
-    usedCodes.add(code);
+    while (usedCodes.has(finalCode)) finalCode = `${code}_${i++}`;
+    usedCodes.add(finalCode);
 
     await db.insert(medicalResults).values({
       visitId,
-      code,
+      code: finalCode,
       label: r.label.slice(0, 160),
       category: (r.category || "أخرى").slice(0, 80),
       numericValue: r.numericValue !== null ? String(r.numericValue) : null,

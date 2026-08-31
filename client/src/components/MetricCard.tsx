@@ -17,8 +17,9 @@ type MetricCardProps = {
   trend: "ارتفع" | "انخفض" | "مستقر" | "بيانات غير متوفرة";
   status: MedicalStatus;
   examDate: string;
-  lastFive: Array<{ value: string; examDate: string; status: MedicalStatus }>;
-  history: Array<{ value: string; examDate: string; status: MedicalStatus }>;
+  lastFive: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
+  history: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
+  hasUnitMismatch?: boolean;
   interpretation: TrendInterpretation;
   onOpenHistory: () => void;
 };
