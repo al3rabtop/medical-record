@@ -11,8 +11,20 @@ const SYSTEM_PROMPT = `أنت مساعد لاستخراج نتائج التحا�
 
 مهمتك: اقرأ التقرير واستخرج البيانات بدقة تامة. لا تخمّن أبداً.
 
+بعض التقارير ليست أرقاماً بل نصوص وصفية (أشعة، خزعات، تقارير أطباء). في هذه الحالة:
+- اضبط "reportKind" على "narrative"
+- اترك "results" فارغة
+- املأ "summaryAr" بملخص عربي مبسّط في ٢-٤ جمل يفهمه شخص غير طبيب
+- املأ "clinicalText" بنص التقرير الطبي كما ورد بالإنجليزية (الانطباع والنتائج الأساسية)
+
+أما تقارير التحاليل الرقمية فاضبط "reportKind" على "labs" واملأ "results".
+
 أعد JSON فقط بدون أي نص إضافي وبدون علامات markdown، بهذا الشكل:
 {
+  "reportKind": "labs أو narrative",
+  "reportType": "نوع التقرير بالعربية: تحاليل مختبرية | أشعة | خزعة | تقرير طبيب",
+  "summaryAr": "ملخص عربي مبسّط للتقارير الوصفية، أو null",
+  "clinicalText": "النص الطبي الأصلي للتقارير الوصفية، أو null",
   "examDate": "YYYY-MM-DD أو null",
   "facility": "اسم المختبر/المستشفى أو null",
   "physician": "اسم الطبيب أو null",
@@ -208,6 +220,10 @@ export function registerExtractRoute(app: Express) {
       const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
       let parsed: {
+        reportKind?: string;
+        reportType?: string | null;
+        summaryAr?: string | null;
+        clinicalText?: string | null;
         examDate: string | null;
         facility: string | null;
         physician: string | null;
@@ -239,9 +255,14 @@ export function registerExtractRoute(app: Express) {
         }
       }
 
-      if (!Array.isArray(parsed.results) || parsed.results.length === 0) {
+      const isNarrative =
+        parsed.reportKind === "narrative" ||
+        (!Array.isArray(parsed.results) || parsed.results.length === 0) &&
+          Boolean(parsed.summaryAr || parsed.clinicalText);
+
+      if (!isNarrative && (!Array.isArray(parsed.results) || parsed.results.length === 0)) {
         res.status(422).json({
-          error: "لم يتم العثور على نتائج تحاليل في هذا الملف. تأكد من وضوح الصورة.",
+          error: "لم يتم العثور على نتائج في هذا الملف. تأكد من وضوح الصورة.",
         });
         return;
       }
@@ -250,7 +271,11 @@ export function registerExtractRoute(app: Express) {
         examDate: parsed.examDate ?? null,
         facility: parsed.facility ?? null,
         physician: parsed.physician ?? null,
-        results: parsed.results,
+        results: Array.isArray(parsed.results) ? parsed.results : [],
+        reportKind: isNarrative ? "narrative" : "labs",
+        reportType: parsed.reportType ?? null,
+        summaryAr: parsed.summaryAr ?? null,
+        clinicalText: parsed.clinicalText ?? null,
         truncated,
       });
     } catch (err) {

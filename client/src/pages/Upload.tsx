@@ -42,6 +42,10 @@ export default function Upload() {
   const [physician, setPhysician] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [truncated, setTruncated] = useState(false);
+  const [reportKind, setReportKind] = useState<"labs" | "narrative">("labs");
+  const [reportType, setReportType] = useState<string | null>(null);
+  const [summaryAr, setSummaryAr] = useState("");
+  const [clinicalText, setClinicalText] = useState("");
 
   const saveReport = trpc.medical.saveReport.useMutation({
     onSuccess: async () => {
@@ -76,6 +80,10 @@ export default function Upload() {
       }
 
       setTruncated(Boolean(data.truncated));
+      setReportKind(data.reportKind === "narrative" ? "narrative" : "labs");
+      setReportType(data.reportType ?? null);
+      setSummaryAr(data.summaryAr ?? "");
+      setClinicalText(data.clinicalText ?? "");
       setExamDate(data.examDate ?? "");
       setFacility(data.facility ?? "");
       setPhysician(data.physician ?? "");
@@ -102,15 +110,20 @@ export default function Upload() {
       setError("يرجى إدخال تاريخ الفحص");
       return;
     }
-    const invalid = rows.find(r => !r.label.trim() || !r.value.trim());
-    if (invalid) {
-      setError("يرجى تعبئة اسم الفحص والقيمة لكل صف، أو حذف الصفوف الناقصة");
-      return;
+    if (reportKind === "labs") {
+      const invalid = rows.find(r => !r.label.trim() || !r.value.trim());
+      if (invalid) {
+        setError("يرجى تعبئة اسم الفحص والقيمة لكل صف، أو حذف الصفوف الناقصة");
+        return;
+      }
     }
     saveReport.mutate({
       examDate,
       facility: facility.trim() || null,
       physician: physician.trim() || null,
+      reportType,
+      summaryAr: summaryAr.trim() || null,
+      clinicalText: clinicalText.trim() || null,
       results: rows.map(r => ({
         label: r.label.trim(),
         category: r.category,
@@ -228,7 +241,25 @@ export default function Upload() {
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+            {reportKind === "narrative" && (
+              <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
+                <p className="text-sm font-extrabold text-slate-900">
+                  {reportType ?? "تقرير وصفي"} — راجع النص قبل الحفظ
+                </p>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-700">ملخص مبسّط بالعربية</span>
+                  <textarea value={summaryAr} onChange={e => setSummaryAr(e.target.value)} rows={4}
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-sm leading-6 outline-none focus:border-teal-700" />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-slate-700">النص الطبي الأصلي (للطبيب)</span>
+                  <textarea value={clinicalText} onChange={e => setClinicalText(e.target.value)} rows={6} dir="ltr"
+                    className="rounded-xl border border-slate-200 px-3 py-2 text-xs leading-5 outline-none focus:border-teal-700" />
+                </label>
+              </div>
+            )}
+
+            {reportKind === "labs" && <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
                   <tr>
@@ -309,12 +340,12 @@ export default function Upload() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </div>}
 
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleSave}
-                disabled={saveReport.isPending || rows.length === 0}
+                disabled={saveReport.isPending || (reportKind === "labs" && rows.length === 0)}
                 className="flex items-center gap-2 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900 disabled:opacity-60"
               >
                 {saveReport.isPending ? (
@@ -322,7 +353,7 @@ export default function Upload() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                حفظ النتائج ({rows.length})
+                {reportKind === "narrative" ? "حفظ التقرير" : `حفظ النتائج (${rows.length})`}
               </button>
               <button
                 onClick={() => {

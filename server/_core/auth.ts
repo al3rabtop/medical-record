@@ -4,7 +4,7 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
-import { createUser, getUserByEmail, getUserById, touchLastSignedIn } from "../db";
+import { createUser, getUserByEmail, getUserById, touchLastSignedIn, updatePassword } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { ENV } from "./env";
 
@@ -194,6 +194,39 @@ export function registerAuthRoutes(app: Express) {
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     res.clearCookie(COOKIE_NAME, getSessionCookieOptions(req));
+    res.json({ success: true });
+  });
+
+  app.post("/api/auth/change-password", async (req: Request, res: Response) => {
+    const user = await authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "يجب تسجيل الدخول" });
+      return;
+    }
+
+    const { currentPassword, newPassword } = (req.body ?? {}) as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!isNonEmptyString(currentPassword) || !isNonEmptyString(newPassword)) {
+      res.status(400).json({ error: "كلمة المرور الحالية والجديدة مطلوبتان" });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل" });
+      return;
+    }
+
+    // The current password is always verified, so a hijacked session alone
+    // cannot be used to take over the account.
+    const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!matches) {
+      res.status(403).json({ error: "كلمة المرور الحالية غير صحيحة" });
+      return;
+    }
+
+    await updatePassword(user.id, await bcrypt.hash(newPassword, 10));
     res.json({ success: true });
   });
 

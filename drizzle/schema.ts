@@ -47,6 +47,10 @@ export const medicalVisits = mysqlTable("medicalVisits", {
   testCount: int("testCount").notNull().default(0),
   abnormalCount: int("abnormalCount").notNull().default(0),
   summary: text("summary"),
+  /** Plain-Arabic summary of a narrative report (radiology, pathology, consult). */
+  summaryAr: text("summaryAr"),
+  /** The original clinical text as written, for a physician reading the record. */
+  clinicalText: text("clinicalText"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => [

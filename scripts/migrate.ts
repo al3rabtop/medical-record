@@ -128,6 +128,8 @@ async function main() {
         testCount INT NOT NULL DEFAULT 0,
         abnormalCount INT NOT NULL DEFAULT 0,
         summary TEXT,
+        summaryAr TEXT,
+        clinicalText TEXT,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX medicalVisits_examDate_idx (examDate)
@@ -193,6 +195,18 @@ async function main() {
     if (!(await columnExists(conn, "users", "canUpload"))) {
       console.log("[migrate] Adding users.canUpload...");
       await conn.query(`ALTER TABLE users ADD COLUMN canUpload BOOLEAN NOT NULL DEFAULT TRUE`);
+    }
+  }
+
+  // --- medicalVisits: narrative report fields
+  if (await tableExists(conn, "medicalVisits")) {
+    if (!(await columnExists(conn, "medicalVisits", "summaryAr"))) {
+      console.log("[migrate] Adding medicalVisits.summaryAr...");
+      await conn.query(`ALTER TABLE medicalVisits ADD COLUMN summaryAr TEXT NULL`);
+    }
+    if (!(await columnExists(conn, "medicalVisits", "clinicalText"))) {
+      console.log("[migrate] Adding medicalVisits.clinicalText...");
+      await conn.query(`ALTER TABLE medicalVisits ADD COLUMN clinicalText TEXT NULL`);
     }
   }
 

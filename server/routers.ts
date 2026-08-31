@@ -90,8 +90,10 @@ export const appRouter = router({
                 abbr: z.string().nullable().optional(),
                 about: z.string().nullable().optional(),
               })
-            )
-            .min(1),
+            ),
+          reportType: z.string().nullable().optional(),
+          summaryAr: z.string().nullable().optional(),
+          clinicalText: z.string().nullable().optional(),
         })
       )
       .mutation(({ ctx, input }) => {

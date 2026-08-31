@@ -14,6 +14,7 @@ import Pathology from "./pages/Pathology";
 import Timeline from "./pages/Timeline";
 import Upload from "./pages/Upload";
 import Admin from "./pages/Admin";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -33,6 +34,9 @@ function Router() {
       </Route>
       <Route path={"/pathology"}>
         <RequireAuth><Pathology /></RequireAuth>
+      </Route>
+      <Route path={"/settings"}>
+        <RequireAuth><Settings /></RequireAuth>
       </Route>
       <Route path={"/admin"}>
         <RequireAuth><Admin /></RequireAuth>

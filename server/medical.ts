@@ -209,6 +209,9 @@ export async function saveReviewedReport(
     facility: string | null;
     physician: string | null;
     results: ReviewedResult[];
+    reportType?: string | null;
+    summaryAr?: string | null;
+    clinicalText?: string | null;
   }
 ) {
   const db = await getDb();
@@ -227,7 +230,9 @@ export async function saveReviewedReport(
     visitNumber,
     examDate: input.examDate,
     reportDate: input.examDate,
-    reportType: "تحاليل مختبرية",
+    reportType: input.reportType || "تحاليل مختبرية",
+    summaryAr: input.summaryAr ?? null,
+    clinicalText: input.clinicalText ?? null,
     facility: input.facility,
     physician: input.physician,
     source: "رفع يدوي",
@@ -267,7 +272,7 @@ export async function saveReviewedReport(
     };
   });
 
-  await db.insert(medicalResults).values(rows);
+  if (rows.length > 0) await db.insert(medicalResults).values(rows);
 
   return { visitId, visitNumber, resultCount: rows.length, abnormalCount };
 }
