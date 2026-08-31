@@ -63,6 +63,8 @@ export async function authenticateRequest(req: Request): Promise<User | null> {
 
   const user = await getUserById(userId);
   if (!user) return null;
+  // Suspension takes effect immediately, including for already-issued sessions.
+  if (user.status === "suspended") return null;
 
   return user;
 }
@@ -151,6 +153,11 @@ export function registerAuthRoutes(app: Express) {
 
     if (!user || !passwordMatches) {
       res.status(401).json({ error: "بيانات الدخول غير صحيحة" });
+      return;
+    }
+
+    if (user.status === "suspended") {
+      res.status(403).json({ error: "تم إيقاف هذا الحساب. تواصل مع المسؤول." });
       return;
     }
 

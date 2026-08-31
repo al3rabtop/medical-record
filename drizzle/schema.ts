@@ -1,4 +1,4 @@
-import { decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing email/password auth.
@@ -19,6 +19,10 @@ export const users = mysqlTable("users", {
   /** Birth year only — day/month intentionally not collected. */
   birthYear: int("birthYear"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  /** Suspended accounts cannot sign in, and existing sessions stop working. */
+  status: mysqlEnum("status", ["active", "suspended"]).default("active").notNull(),
+  /** Lets an admin disable report uploads without suspending the whole account. */
+  canUpload: boolean("canUpload").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

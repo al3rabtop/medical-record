@@ -2,6 +2,7 @@ import { PortalShell } from "@/components/PortalShell";
 import { PortalError, PortalLoading } from "@/components/PortalState";
 import { trpc } from "@/lib/trpc";
 import { Activity, FileText, Users } from "lucide-react";
+import { AdminUserRow, type AdminUser } from "@/components/AdminUserRow";
 
 function fmt(d: string | Date | null) {
   if (!d) return "—";
@@ -14,6 +15,7 @@ function fmt(d: string | Date | null) {
 
 export default function Admin() {
   const overview = trpc.admin.overview.useQuery();
+  const me = trpc.auth.me.useQuery();
 
   if (overview.isLoading) return <PortalShell><PortalLoading /></PortalShell>;
   if (overview.error || !overview.data) return <PortalShell><PortalError /></PortalShell>;
@@ -43,27 +45,18 @@ export default function Admin() {
                 <th className="p-3 text-right font-bold">البريد</th>
                 <th className="p-3 text-right font-bold">سنة الميلاد</th>
                 <th className="p-3 text-right font-bold">التقارير</th>
-                <th className="p-3 text-right font-bold">النتائج</th>
-                <th className="p-3 text-right font-bold">التسجيل</th>
                 <th className="p-3 text-right font-bold">آخر دخول</th>
+                <th className="p-3 text-right font-bold">الحالة</th>
+                <th className="p-3 text-right font-bold">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
               {users.map(u => (
-                <tr key={u.id} className="border-b border-slate-100">
-                  <td className="p-3 font-bold text-slate-800">
-                    {u.patientName ?? "—"}
-                    {u.role === "admin" && (
-                      <span className="mr-2 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800">مدير</span>
-                    )}
-                  </td>
-                  <td className="p-3 text-slate-600" dir="ltr">{u.email}</td>
-                  <td className="p-3 text-slate-500" dir="ltr">{u.birthYear ?? "—"}</td>
-                  <td className="p-3 font-bold text-slate-700">{u.visitCount}</td>
-                  <td className="p-3 font-bold text-slate-700">{u.resultCount}</td>
-                  <td className="p-3 text-slate-500">{fmt(u.createdAt)}</td>
-                  <td className="p-3 text-slate-500">{fmt(u.lastSignedIn)}</td>
-                </tr>
+                <AdminUserRow
+                  key={u.id}
+                  user={u as unknown as AdminUser}
+                  isSelf={me.data?.id === u.id}
+                />
               ))}
             </tbody>
           </table>

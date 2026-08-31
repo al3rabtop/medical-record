@@ -112,6 +112,11 @@ export function registerExtractRoute(app: Express) {
       return;
     }
 
+    if (!user.canUpload) {
+      res.status(403).json({ error: "تم إيقاف رفع التقارير لهذا الحساب." });
+      return;
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       res.status(500).json({

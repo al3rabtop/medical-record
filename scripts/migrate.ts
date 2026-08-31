@@ -70,6 +70,8 @@ async function main() {
         patientName VARCHAR(160) NULL,
         birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
+        status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+        canUpload BOOLEAN NOT NULL DEFAULT TRUE,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         lastSignedIn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -87,6 +89,8 @@ async function main() {
         patientName VARCHAR(160) NULL,
         birthYear INT NULL,
         role ENUM('user','admin') NOT NULL DEFAULT 'user',
+        status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+        canUpload BOOLEAN NOT NULL DEFAULT TRUE,
         createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         lastSignedIn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -173,6 +177,18 @@ async function main() {
           REFERENCES medicalVisits(id) ON DELETE CASCADE
       ) DEFAULT CHARSET=utf8mb4
     `);
+  }
+
+  // --- users: moderation columns
+  if (await tableExists(conn, "users")) {
+    if (!(await columnExists(conn, "users", "status"))) {
+      console.log("[migrate] Adding users.status...");
+      await conn.query(`ALTER TABLE users ADD COLUMN status ENUM('active','suspended') NOT NULL DEFAULT 'active'`);
+    }
+    if (!(await columnExists(conn, "users", "canUpload"))) {
+      console.log("[migrate] Adding users.canUpload...");
+      await conn.query(`ALTER TABLE users ADD COLUMN canUpload BOOLEAN NOT NULL DEFAULT TRUE`);
+    }
   }
 
   // --- medicalResults: abbr / about (added with the test-info feature)
