@@ -26,7 +26,11 @@ const HELPER_PROMPT = `حوّل تقرير التحاليل الطبية الم�
 - لا تضف أي فحص غير موجود في التقرير الأصلي
 - لا تغيّر أي رقم أو وحدة قياس
 
-بعد الجدول، صدّر الناتج كملف PDF من صفحة واحدة أو صفحتين.`;
+بعد الجدول، صدّر الناتج بإحدى هاتين الطريقتين:
+- ملف PDF من صفحة أو صفحتين (الأفضل)
+- أو صورة واضحة للجدول (PNG أو JPG)
+
+وإن تعذّر عليك تصدير ملف، اعرض الجدول أمامي فقط وسآخذ لقطة شاشة له.`;
 
 export function UploadTroubleshooting() {
   const [open, setOpen] = useState(false);
@@ -67,6 +71,9 @@ export function UploadTroubleshooting() {
           <p className="mt-4 text-sm leading-6 text-slate-700">
             الحل: افتح أي مساعد ذكي (مثل ChatGPT أو Gemini أو Claude)، ارفع له تقريرك
             الأصلي، وألصق له النص التالي. سيعطيك ملخصاً بصفحة واحدة ترفعه هنا بسهولة.
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            المنصة تقبل ملفات PDF والصور (JPG، PNG) — حتى لقطة شاشة واضحة للجدول تكفي.
           </p>
 
           <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
