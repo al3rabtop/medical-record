@@ -7,7 +7,8 @@ import { isStorageConfigured, uploadObject } from "./_core/storage";
 
 /** Raw upload guard, before compression. Independent of the AI extraction limit — storing never touches the AI. */
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
-const IMAGE_MAX_WIDTH = 1600;
+/** Bounds the longest side (width OR height) — most phone photos of a report are portrait, so height needs the same cap as width. */
+const IMAGE_MAX_DIMENSION = 1600;
 const IMAGE_QUALITY = 80;
 
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"]);
@@ -25,12 +26,22 @@ export type StoredDocument = {
 };
 
 /**
- * Compresses an image to a max width of 1600px (aspect ratio preserved) and
- * re-encodes as WebP @ 80% quality — small enough to store cheaply while
- * keeping medical text, numbers, and reference ranges legible. PDFs are
- * preserved byte-for-byte: no PDF compression/conversion library exists in
- * this project, and introducing one is unnecessary for the goal (a verifiable
- * copy of the source), so they pass through unchanged.
+ * Compresses an image to a max of 1600px on its longest side (aspect ratio
+ * preserved, never enlarged) and re-encodes as WebP @ 80% quality — small
+ * enough to store cheaply while keeping medical text, numbers, and reference
+ * ranges legible.
+ *
+ * PDFs are preserved byte-for-byte. Real PDF compression (recompressing the
+ * embedded page images) needs either a native binary (Ghostscript/qpdf —
+ * not something this app's Nixpacks/Railway build can be guaranteed to have,
+ * and adding one would be exactly the fragile dependency we want to avoid)
+ * or rasterizing each page into an image, which trades away searchable text
+ * and can easily end up *larger*, not smaller, for text-heavy reports. A
+ * pure-JS structural repack (e.g. pdf-lib re-saving with object streams)
+ * was evaluated too, but it only touches object/xref overhead, not the
+ * embedded image streams that dominate a scanned report's size, so its
+ * realistic yield here is marginal and not worth the added risk of failing
+ * to parse an unusual PDF. So PDFs pass through unchanged for now.
  */
 async function prepareForStorage(
   buffer: Buffer,
@@ -43,7 +54,12 @@ async function prepareForStorage(
   if (IMAGE_MIME_TYPES.has(mimeType)) {
     const compressed = await sharp(buffer)
       .rotate() // bake in EXIF orientation before resizing, so rotated phone photos stay upright
-      .resize({ width: IMAGE_MAX_WIDTH, withoutEnlargement: true })
+      .resize({
+        width: IMAGE_MAX_DIMENSION,
+        height: IMAGE_MAX_DIMENSION,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
       .webp({ quality: IMAGE_QUALITY })
       .toBuffer();
     return { buffer: compressed, mimeType: "image/webp", extension: "webp" };
