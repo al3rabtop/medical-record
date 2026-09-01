@@ -46,3 +46,54 @@ describe("medical timeline presentation", () => {
     expect(card.lastFive[4]?.examDate).toBe("2026-05-31");
   });
 });
+
+describe("result card ordering", () => {
+  const row = (
+    code: string,
+    examDate: string,
+    status: "follow_up" | "reassuring",
+    id = 1
+  ) => ({
+    id,
+    code,
+    label: code,
+    category: "الدم",
+    numericValue: "1",
+    valueText: "1",
+    unit: null,
+    referenceRange: "0-10",
+    status,
+    examDate,
+  });
+
+  it("puts the most recently measured tests first", () => {
+    const cards = makeResultCards([
+      row("hemoglobin", "2024-01-01", "reassuring"),
+      row("some_new_test", "2026-08-30", "reassuring"),
+    ]);
+
+    // hemoglobin is in the hand-written priority list, but the newer test
+    // must still win — recency is the primary ordering.
+    expect(cards[0].code).toBe("some_new_test");
+    expect(cards[1].code).toBe("hemoglobin");
+  });
+
+  it("surfaces results needing follow-up above reassuring ones from the same report", () => {
+    const cards = makeResultCards([
+      row("test_ok", "2026-08-30", "reassuring"),
+      row("test_attention", "2026-08-30", "follow_up"),
+    ]);
+
+    expect(cards[0].code).toBe("test_attention");
+    expect(cards[1].code).toBe("test_ok");
+  });
+
+  it("keeps headline tests ahead when date and status are equal", () => {
+    const cards = makeResultCards([
+      row("zzz_other", "2026-08-30", "reassuring"),
+      row("hemoglobin", "2026-08-30", "reassuring"),
+    ]);
+
+    expect(cards[0].code).toBe("hemoglobin");
+  });
+});

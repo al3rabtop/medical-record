@@ -128,6 +128,19 @@ export function makeResultCards(
       } satisfies ResultCard;
     })
     .sort((a, b) => {
+      // Newest measurement first, so a report uploaded today surfaces at the
+      // top instead of being buried by a hand-written priority list.
+      if (a.examDate !== b.examDate) return a.examDate < b.examDate ? 1 : -1;
+
+      // Within the same date — typically one report with many tests — put
+      // the ones needing attention above the reassuring ones.
+      const rank = (status: MedicalStatus) =>
+        status === "follow_up" ? 0 : status === "reassuring" ? 1 : 2;
+      const statusDiff = rank(a.status) - rank(b.status);
+      if (statusDiff !== 0) return statusDiff;
+
+      // Finally, keep the common headline tests ahead of the rest so the
+      // ordering stays stable and familiar rather than arbitrary.
       const aIndex = priorityCodes.indexOf(a.code);
       const bIndex = priorityCodes.indexOf(b.code);
       return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
