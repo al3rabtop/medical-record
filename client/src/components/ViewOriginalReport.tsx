@@ -35,12 +35,17 @@ function formatDocumentDate(date: Date) {
  * authenticated backend route. Never calls the AI — this only reads what
  * was already stored at upload time.
  *
- * A visit can have more than one stored document (e.g. a re-upload merged
- * into the same visit), so with more than one document this shows a picker
- * instead of guessing which one the user wants.
+ * Accepts every visit id behind the document set being viewed — a single
+ * visit can have more than one stored document (e.g. a re-upload merged
+ * into it), and a test indicator's history can span many visits, each with
+ * its own upload. Either way, with more than one document this shows a
+ * picker instead of guessing which one the user wants.
  */
-export function ViewOriginalReport({ visitId }: { visitId: number }) {
-  const docs = trpc.medical.visitDocuments.useQuery({ visitId });
+export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
+  const docs = trpc.medical.visitDocuments.useQuery(
+    { visitIds },
+    { enabled: visitIds.length > 0 }
+  );
   const [pickerOpen, setPickerOpen] = useState(false);
 
   if (docs.isLoading) {

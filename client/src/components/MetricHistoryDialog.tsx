@@ -26,7 +26,7 @@ type MetricHistoryDialogProps = {
     examDate: string;
     status: MedicalStatus;
     interpretation: TrendInterpretation;
-    history: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
+    history: Array<{ visitId: number; value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
     hasUnitMismatch?: boolean;
     hasRangeMismatch?: boolean;
     facilities?: string[];
@@ -89,7 +89,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
         </DialogHeader>
         <div className="space-y-5 px-6 py-6 sm:px-8">
           <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-teal-800 p-4 text-white"><p className="text-xs font-bold text-teal-100">أحدث نتيجة</p><p className="mt-1 text-3xl font-extrabold">{card.value}<span className="mr-1 text-xs text-teal-100">{card.unit ?? ""}</span></p><p className="mt-2 text-[11px] text-teal-100">{card.examDate}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">المدى المرجعي</p><p className="mt-2 font-extrabold text-slate-900">{card.referenceRange ?? "غير مذكور"}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">عدد القياسات</p><p className="mt-2 flex items-center gap-2 text-xl font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />{card.history.length}</p></div></div>
-          <div className="flex flex-wrap gap-2"><ViewOriginalReport visitId={card.visitId} /></div>
+          <div className="flex flex-wrap gap-2"><ViewOriginalReport visitIds={Array.from(new Set(card.history.map((item) => item.visitId)))} /></div>
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4"><div className="flex gap-2"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-teal-800" /><div><p className="text-sm font-extrabold text-teal-950">{card.interpretation.label}</p><p className="mt-1 text-sm leading-6 text-teal-900/80">{card.interpretation.detail}</p></div></div></div>
           {(card.hasUnitMismatch || card.hasRangeMismatch) && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm text-amber-900">

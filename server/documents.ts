@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
 import { medicalDocuments, medicalVisits } from "../drizzle/schema";
@@ -14,6 +14,7 @@ const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image
 
 export type StoredDocument = {
   id: number;
+  visitId: number;
   originalName: string;
   mimeType: string;
   fileSize: number;
@@ -95,14 +96,23 @@ export async function storeOriginalDocument(
   return { id: Number(inserted[0].insertId) };
 }
 
-/** Lists stored documents for a visit, but only when it belongs to this user. */
-export async function listDocumentsForVisit(userId: number, visitId: number): Promise<StoredDocument[]> {
+/**
+ * Lists stored documents across one or more visits, but only the ones that
+ * belong to this user. A single test indicator (e.g. hemoglobin) can span
+ * many visits over time, each with its own uploaded report, so callers pass
+ * every visit id behind that indicator's history rather than just one.
+ */
+export async function listDocumentsForVisits(userId: number, visitIds: number[]): Promise<StoredDocument[]> {
+  const uniqueIds = Array.from(new Set(visitIds));
+  if (uniqueIds.length === 0) return [];
+
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
 
   return db
     .select({
       id: medicalDocuments.id,
+      visitId: medicalDocuments.visitId,
       originalName: medicalDocuments.originalName,
       mimeType: medicalDocuments.mimeType,
       fileSize: medicalDocuments.fileSize,
@@ -110,7 +120,7 @@ export async function listDocumentsForVisit(userId: number, visitId: number): Pr
     })
     .from(medicalDocuments)
     .innerJoin(medicalVisits, eq(medicalDocuments.visitId, medicalVisits.id))
-    .where(and(eq(medicalDocuments.visitId, visitId), eq(medicalVisits.userId, userId)))
+    .where(and(inArray(medicalDocuments.visitId, uniqueIds), eq(medicalVisits.userId, userId)))
     .orderBy(desc(medicalDocuments.createdAt));
 }
 

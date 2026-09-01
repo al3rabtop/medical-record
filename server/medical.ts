@@ -12,7 +12,7 @@ export type ResultCard = {
   unit: string | null;
   referenceRange: string | null;
   resultId: number;
-  /** The visit this latest measurement came from — used to look up its stored original report. */
+  /** The visit this latest measurement came from. */
   visitId: number;
   abbr: string | null;
   about: string | null;
@@ -21,8 +21,9 @@ export type ResultCard = {
   status: MedicalStatus;
   trend: ReturnType<typeof deriveTrend>;
   interpretation: TrendInterpretation;
-  lastFive: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
-  history: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
+  lastFive: Array<{ visitId: number; value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
+  /** Every visit that ever contributed a measurement for this test — used to look up all of its stored original reports, not just the latest visit's. */
+  history: Array<{ visitId: number; value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
   /** True when this test's history mixes more than one unit across labs — flagged, never silently trusted. */
   hasUnitMismatch: boolean;
   /**
@@ -109,6 +110,7 @@ export function makeResultCards(
       // canonical test in different units, and a shared column-wide unit
       // would silently mislabel older or newer values.
       const history = [...series].reverse().map((item) => ({
+        visitId: item.visitId,
         value: item.valueText,
         unit: item.unit,
         // Reference ranges legitimately differ between labs and between

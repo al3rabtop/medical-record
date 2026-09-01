@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getMedicalDashboardForUser, getMedicalRecordsForUser, saveReviewedReport, deleteVisitForUser, updateResultForUser, getVisitResultsForUser, checkDuplicateReport, mergeIntoVisit, setFollowUpDate, getReminders } from "./medical";
-import { listDocumentsForVisit } from "./documents";
+import { listDocumentsForVisits } from "./documents";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import {
@@ -164,8 +164,8 @@ export const appRouter = router({
       .input(z.object({ visitId: z.number().int().positive() }))
       .query(({ ctx, input }) => getVisitResultsForUser(ctx.user.id, input.visitId)),
     visitDocuments: protectedProcedure
-      .input(z.object({ visitId: z.number().int().positive() }))
-      .query(({ ctx, input }) => listDocumentsForVisit(ctx.user.id, input.visitId)),
+      .input(z.object({ visitIds: z.array(z.number().int().positive()).min(1).max(200) }))
+      .query(({ ctx, input }) => listDocumentsForVisits(ctx.user.id, input.visitIds)),
     updateResult: protectedProcedure
       .input(
         z.object({
