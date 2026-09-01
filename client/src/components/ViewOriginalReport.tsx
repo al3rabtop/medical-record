@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { FileText, Loader2, TriangleAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatMedicalDate } from "@/lib/medical-ui";
 
 const BUTTON_CLASS =
   "flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-wait disabled:opacity-70";
@@ -19,18 +20,6 @@ const FILE_TYPE_LABELS: Record<string, string> = {
 
 function fileTypeLabel(mimeType: string) {
   return FILE_TYPE_LABELS[mimeType] ?? mimeType.split("/")[1]?.toUpperCase() ?? "ملف";
-}
-
-const documentDateFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function formatDocumentDate(date: Date) {
-  return documentDateFormatter.format(date);
 }
 
 /**
@@ -124,7 +113,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
                       {doc.originalName || `الملف ${i + 1}`}
                     </p>
                     <p className="mt-0.5 flex items-center gap-2 text-xs font-semibold text-slate-500">
-                      <span>{formatDocumentDate(doc.createdAt)}</span>
+                      <span>تاريخ الفحص: {formatMedicalDate(doc.examDate)}</span>
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-600">
                         {fileTypeLabel(doc.mimeType)}
                       </span>

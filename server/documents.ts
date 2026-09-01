@@ -18,7 +18,10 @@ export type StoredDocument = {
   originalName: string;
   mimeType: string;
   fileSize: number;
+  /** When the file was uploaded/stored — not the same as the visit's examDate. */
   createdAt: Date;
+  /** The exam/visit date of the medical record this document belongs to. */
+  examDate: string;
 };
 
 /**
@@ -117,6 +120,7 @@ export async function listDocumentsForVisits(userId: number, visitIds: number[])
       mimeType: medicalDocuments.mimeType,
       fileSize: medicalDocuments.fileSize,
       createdAt: medicalDocuments.createdAt,
+      examDate: medicalVisits.examDate,
     })
     .from(medicalDocuments)
     .innerJoin(medicalVisits, eq(medicalDocuments.visitId, medicalVisits.id))
