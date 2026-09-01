@@ -47,20 +47,34 @@ export default function Upload() {
   const [facility, setFacility] = useState("");
   const [physician, setPhysician] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
-  const [truncated, setTruncated] = useState(false);
   const [dup, setDup] = useState<null | {
-    status: "new" | "exact_duplicate" | "partial";
+    status: "new" | "exact_duplicate" | "partial" | "file_duplicate" | "conflict";
     visitId: number | null;
     examDate: string;
     existingCount: number;
     newLabels: string[];
     identicalLabels: string[];
-    changed: Array<{ label: string; oldValue: string; newValue: string }>;
+    changed: Array<{ label: string; oldValue: string; newValue: string; unit: string | null }>;
+    matchedBy?: "hospitalVisitNumber" | "examDate";
   }>(null);
+  // Set when /api/reports/extract recognizes the uploaded bytes as an exact
+  // match for a document already on record — the AI is never even called
+  // for this case, so there is nothing to review; the user just needs to
+  // know it's already there.
+  const [exactDuplicateNotice, setExactDuplicateNotice] = useState<{ existingVisitId: number } | null>(null);
   const [reportKind, setReportKind] = useState<"labs" | "narrative">("labs");
   const [reportType, setReportType] = useState<string | null>(null);
   const [summaryAr, setSummaryAr] = useState("");
   const [clinicalText, setClinicalText] = useState("");
+  // The hospital's own visit/encounter number and a patient identifier
+  // (e.g. MRN), when the report has them — the primary signal used to
+  // recognize "the same hospital visit" across separate uploads.
+  const [hospitalVisitNumber, setHospitalVisitNumber] = useState<string | null>(null);
+  const [patientIdentifier, setPatientIdentifier] = useState<string | null>(null);
+  // SHA-256 of the raw uploaded bytes, computed server-side and echoed back
+  // — carried forward so checkDuplicate/save can recognize the exact file
+  // even if this review session started before a duplicate existed.
+  const [contentHash, setContentHash] = useState<string | null>(null);
   // Kept in memory only to store a compressed copy alongside the visit once
   // it's saved — never re-sent to the AI, and dropped as soon as saving is done.
   const [pendingFile, setPendingFile] = useState<{ base64: string; mediaType: string; name: string } | null>(null);
@@ -109,6 +123,7 @@ export default function Upload() {
   async function handleFile(file: File) {
     setError(null);
     setPendingFile(null);
+    setExactDuplicateNotice(null);
     setStage("loading");
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -131,8 +146,18 @@ export default function Upload() {
         return;
       }
 
+      // The exact same bytes were already stored against a visit this user
+      // owns — the AI was never called for this file. Nothing to review.
+      if (data.exactDuplicate) {
+        setExactDuplicateNotice({ existingVisitId: data.existingVisitId });
+        setStage("pick");
+        return;
+      }
+
       setPendingFile({ base64, mediaType: file.type, name: file.name });
-      setTruncated(Boolean(data.truncated));
+      setContentHash(data.contentHash ?? null);
+      setHospitalVisitNumber(data.hospitalVisitNumber ?? null);
+      setPatientIdentifier(data.patientIdentifier ?? null);
       setReportKind(data.reportKind === "narrative" ? "narrative" : "labs");
       setReportType(data.reportType ?? null);
       setSummaryAr(data.summaryAr ?? "");
@@ -174,7 +199,10 @@ export default function Upload() {
       const check = await checkDup.mutateAsync({
         ...(profileId ? { profileId } : {}),
         examDate,
-        results: rows.map(r => ({ label: r.label.trim(), value: r.value.trim() })),
+        results: rows.map(r => ({ label: r.label.trim(), value: r.value.trim(), abbr: r.abbr, unit: r.unit })),
+        contentHash,
+        hospitalVisitNumber,
+        patientIdentifier,
       });
       if (check.status !== "new") {
         setDup(check);
@@ -194,6 +222,8 @@ export default function Upload() {
       reportType,
       summaryAr: summaryAr.trim() || null,
       clinicalText: clinicalText.trim() || null,
+      hospitalVisitNumber,
+      patientIdentifier,
       results: rows.map(r => ({
         label: r.label.trim(),
         category: r.category,
@@ -245,6 +275,13 @@ export default function Upload() {
           </div>
         )}
 
+        {exactDuplicateNotice && (
+          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
+            <p className="text-base font-extrabold text-amber-900">{t.upload.exactDuplicateTitle}</p>
+            <p className="mt-1 text-sm leading-6 text-amber-800">{t.upload.exactDuplicateBody}</p>
+          </div>
+        )}
+
         {stage === "pick" && (
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
@@ -290,12 +327,50 @@ export default function Upload() {
 
         {stage === "review" && (
           <div className="flex flex-col gap-5">
-            {dup && (
+            {dup && dup.status === "file_duplicate" && (
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
+                <p className="text-base font-extrabold text-amber-900">{t.upload.exactDuplicateTitle}</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800">{t.upload.exactDuplicateBody}</p>
+                <div className="mt-4">
+                  <button
+                    onClick={() => { setDup(null); setStage("pick"); setRows([]); setPendingFile(null); }}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
+                  >
+                    {t.upload.backToUpload}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dup && dup.status === "conflict" && (
+              <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-5">
+                <p className="text-base font-extrabold text-red-900">{t.upload.conflictTitle}</p>
+                <p className="mt-1 text-sm leading-6 text-red-800">{t.upload.conflictBody}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => { setDup(null); doSave(); }}
+                    className="rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900"
+                  >
+                    {t.upload.saveAsSeparateRecord}
+                  </button>
+                  <button
+                    onClick={() => { setDup(null); setStage("pick"); setRows([]); setPendingFile(null); }}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
+                  >
+                    {t.common.cancel}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dup && (dup.status === "exact_duplicate" || dup.status === "partial") && (
               <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
                 <p className="text-base font-extrabold text-amber-900">
                   {dup.status === "exact_duplicate"
                     ? t.upload.duplicateExact
-                    : t.upload.duplicatePartial}
+                    : dup.matchedBy === "hospitalVisitNumber"
+                      ? t.upload.duplicateSameVisitNumber
+                      : t.upload.duplicatePartial}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-amber-800">
                   {t.upload.duplicateHasRecord(dup.examDate, dup.existingCount)}
@@ -323,6 +398,7 @@ export default function Upload() {
                         <li key={c.label}>
                           <span className="font-bold text-slate-800">{c.label}</span>:{" "}
                           <span dir="ltr">{c.oldValue}</span> ← <span dir="ltr" className="font-bold">{c.newValue}</span>
+                          {c.unit ? <span dir="ltr" className="text-slate-500"> {c.unit}</span> : null}
                         </li>
                       ))}
                     </ul>
@@ -342,6 +418,8 @@ export default function Upload() {
                         visitId: dup.visitId!,
                         updateChanged: false,
                         results: payloadFor(dup.newLabels),
+                        hospitalVisitNumber,
+                        patientIdentifier,
                       })}
                       disabled={mergeReport.isPending}
                       className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
@@ -357,6 +435,8 @@ export default function Upload() {
                         visitId: dup.visitId!,
                         updateChanged: true,
                         results: payloadFor([...dup.newLabels, ...dup.changed.map(c => c.label)]),
+                        hospitalVisitNumber,
+                        patientIdentifier,
                       })}
                       disabled={mergeReport.isPending}
                       className="rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
@@ -384,12 +464,6 @@ export default function Upload() {
               </div>
             )}
 
-            {truncated && (
-              <div className="flex items-start gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                {t.upload.reportTooLong}
-              </div>
-            )}
             {lowConfidenceCount > 0 && (
               <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -546,7 +620,6 @@ export default function Upload() {
                   setStage("pick");
                   setRows([]);
                   setError(null);
-                  setTruncated(false);
                   setPendingFile(null);
                 }}
                 className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"

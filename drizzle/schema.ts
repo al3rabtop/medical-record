@@ -56,6 +56,22 @@ export const medicalVisits = mysqlTable("medicalVisits", {
   /** Which person this record belongs to. Nullable during backfill. */
   profileId: int("profileId"),
   visitNumber: varchar("visitNumber", { length: 32 }).notNull().unique(),
+  /**
+   * The HOSPITAL's own visit/encounter number as printed on the report
+   * (e.g. "1594600"), when the extraction found one — distinct from
+   * visitNumber above, which is an app-generated internal identifier and
+   * never appears on any report. Matching visits by this field (when
+   * present) is what makes "same hospital visit" detection reliable across
+   * separately-uploaded reports, instead of relying on exam date alone.
+   */
+  hospitalVisitNumber: varchar("hospitalVisitNumber", { length: 64 }),
+  /**
+   * A patient identifier (e.g. MRN) read off the report, when visible. Used
+   * only as a safety check: a new report claiming the same hospitalVisitNumber
+   * but a DIFFERENT non-null patientIdentifier than what is already stored
+   * for that visit is never auto-merged.
+   */
+  patientIdentifier: varchar("patientIdentifier", { length: 64 }),
   examDate: varchar("examDate", { length: 10 }).notNull(),
   reportDate: varchar("reportDate", { length: 10 }),
   reportType: varchar("reportType", { length: 64 }).notNull().default("تحاليل مختبرية"),
@@ -76,6 +92,7 @@ export const medicalVisits = mysqlTable("medicalVisits", {
   index("medicalVisits_examDate_idx").on(table.examDate),
   index("medicalVisits_userId_idx").on(table.userId),
   index("medicalVisits_profileId_idx").on(table.profileId),
+  index("medicalVisits_hospitalVisitNumber_idx").on(table.hospitalVisitNumber),
 ]);
 
 /** Numeric values are saved where possible, while valueText preserves the original report wording. */
@@ -120,8 +137,20 @@ export const medicalDocuments = mysqlTable("medicalDocuments", {
   mimeType: varchar("mimeType", { length: 100 }).notNull(),
   /** Size in bytes of the stored (compressed) file. */
   fileSize: int("fileSize").notNull().default(0),
+  /**
+   * SHA-256 of the RAW uploaded file bytes (before compression), hex-encoded.
+   * This is what "the exact same file" means — never hashed from OCR text,
+   * parsed JSON, or the compressed output, since the point is to recognize
+   * the identical physical upload, not equivalent extracted content.
+   * Nullable so pre-existing rows (uploaded before this column existed)
+   * don't block a real migration.
+   */
+  contentHash: varchar("contentHash", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => [index("medicalDocuments_visit_idx").on(table.visitId)]);
+}, (table) => [
+  index("medicalDocuments_visit_idx").on(table.visitId),
+  index("medicalDocuments_contentHash_idx").on(table.contentHash),
+]);
 
 export type MedicalVisit = typeof medicalVisits.$inferSelect;
 export type MedicalResult = typeof medicalResults.$inferSelect;

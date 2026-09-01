@@ -60,25 +60,32 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   // percentage of white cells, and an absolute count per litre. They are
   // clinically different numbers (e.g. 55% vs 3.2 x10^9/L) and must never
   // share a code — plotting them on one trend line would be meaningless.
-  // Bare labels with no qualifier keep the base code.
+  // Bare labels with no qualifier keep the base code. IMPORTANT: none of the
+  // aliases below may include a "%"/"#"-suffixed short form (e.g. "eos%",
+  // "neut#") — normalisation strips punctuation, so "eos%" and "eos#" both
+  // collapse to the same string as the bare "eos" alias and would silently
+  // overwrite it in ALIAS_TO_CODE (last write in Object.entries order wins).
+  // "%"/"#" qualifiers on an otherwise-bare label are instead detected from
+  // the raw (pre-normalisation) text by applyCountQualifier below, which
+  // redirects a bare match to its _percent/_absolute sibling when present.
   neutrophils: ["العدلات", "النيتروفيل", "الخلايا المتعادلة", "المتعادلات", "الخلايا المتعددة النوى", "الخلايا المحببة", "neutrophils", "neut"],
-  neutrophils_percent: ["النيتروفيل النسبة", "العدلات النسبة المئوية", "العدلات النسبة", "نسبة العدلات", "neut%", "neutrophilspercent"],
+  neutrophils_percent: ["النيتروفيل النسبة", "العدلات النسبة المئوية", "العدلات النسبة", "نسبة العدلات", "neutrophilspercent"],
   neutrophils_absolute: ["النيتروفيل العدد", "العدلات العدد المطلق", "العدلات العدد", "العدد المطلق للعدلات", "absoluteneutrophilcount", "anc"],
 
   lymphocytes: ["الخلايا اللمفاوية", "اللمفاويات", "الليمفوسيت", "الليمفوسيتات", "لمفاويات", "lymphocytes", "lym"],
-  lymphocytes_percent: ["الليمفوسيت النسبة", "الليمفوسيتات النسبة المئوية", "الليمفوسيتات النسبة", "نسبة اللمفاويات", "lym%", "lymphocytespercent"],
+  lymphocytes_percent: ["الليمفوسيت النسبة", "الليمفوسيتات النسبة المئوية", "الليمفوسيتات النسبة", "نسبة اللمفاويات", "lymphocytespercent"],
   lymphocytes_absolute: ["الليمفوسيت العدد", "الليمفوسيتات العدد المطلق", "الليمفوسيتات العدد", "absolutelymphocytecount", "alc"],
 
   monocytes: ["الوحيدات", "الأحادية", "الخلايا الأحادية", "الخلايا أحادية النوى", "monocytes", "mono"],
-  monocytes_percent: ["الأحادية النسبة", "الخلايا الأحادية النسبة المئوية", "نسبة الوحيدات", "mono%", "monocytespercent"],
+  monocytes_percent: ["الأحادية النسبة", "الخلايا الأحادية النسبة المئوية", "نسبة الوحيدات", "monocytespercent"],
   monocytes_absolute: ["الأحادية العدد", "الخلايا الأحادية العدد المطلق", "عدد الخلايا الأحادية المطلق", "absolutemonocytecount"],
 
   eosinophils: ["الحمضات", "الخلايا الحمضية", "eosinophils", "eos"],
-  eosinophils_percent: ["الحمضات النسبة", "الحمضات النسبة المئوية", "نسبة الحمضات", "eos%", "eosinophilspercent"],
+  eosinophils_percent: ["الحمضات النسبة", "الحمضات النسبة المئوية", "نسبة الحمضات", "eosinophilspercent"],
   eosinophils_absolute: ["الحمضات العدد", "الحمضات العدد المطلق", "عدد الخلايا الحمضية المطلق", "absoluteeosinophilcount"],
 
   basophils: ["الأسسات", "الخلايا القاعدية", "القاعديات", "الحمضيات القاعدية", "basophils", "baso"],
-  basophils_percent: ["القاعديات النسبة", "الخلايا القاعدية النسبة المئوية", "نسبة القاعديات", "baso%", "basophilspercent"],
+  basophils_percent: ["القاعديات النسبة", "الخلايا القاعدية النسبة المئوية", "نسبة القاعديات", "basophilspercent"],
   basophils_absolute: ["القاعديات العدد", "الخلايا القاعدية العدد المطلق", "عدد الخلايا القاعدية المطلق", "absolutebasophilcount"],
 
   ferritin: ["الفيريتين", "فيريتين", "ferritin"],
@@ -178,8 +185,10 @@ export type TestCodeResolution = {
  * the label alone doesn't resolve.
  */
 export function resolveTestCodeDetailed(label: string, abbr?: string | null): TestCodeResolution {
-  const fromLabel = resolveFromLabel(label);
-  const fromAbbr = abbr ? resolveFromAbbr(abbr) : null;
+  const rawFromLabel = resolveFromLabel(label);
+  const rawFromAbbr = abbr ? resolveFromAbbr(abbr) : null;
+  const fromLabel = rawFromLabel ? applyCountQualifier(label, rawFromLabel) : null;
+  const fromAbbr = rawFromAbbr && abbr ? applyCountQualifier(abbr, rawFromAbbr) : null;
 
   if (fromLabel && fromAbbr && fromLabel !== fromAbbr) {
     // Trust the label, but surface the disagreement.
@@ -190,6 +199,27 @@ export function resolveTestCodeDetailed(label: string, abbr?: string | null): Te
   if (fromAbbr) return { code: fromAbbr, matched: true };
 
   return { code: fallbackSlug(label), matched: false };
+}
+
+/**
+ * A differential-count code that matched bare (e.g. plain "eosinophils")
+ * can still carry a "%" or "#" qualifier in the raw, pre-normalisation text
+ * — normalisation strips both as punctuation, so this has to run on the
+ * original string. "#" is the common lab shorthand for an absolute count
+ * (e.g. "EOS#" vs "EOS%"). Only redirects when the matched code actually has
+ * that sibling variant, so it is a no-op for every other test.
+ */
+const ABSOLUTE_COUNT_QUALIFIER = /#|\babsolute\b|\babs\b|مطلق/i;
+const PERCENT_QUALIFIER = /%|\bpercent(age)?\b/i;
+
+function applyCountQualifier(rawText: string, code: string): string {
+  if (ABSOLUTE_COUNT_QUALIFIER.test(rawText) && ALIAS_GROUPS[`${code}_absolute`]) {
+    return `${code}_absolute`;
+  }
+  if (PERCENT_QUALIFIER.test(rawText) && ALIAS_GROUPS[`${code}_percent`]) {
+    return `${code}_percent`;
+  }
+  return code;
 }
 
 /** Resolves using only the abbreviation field. */

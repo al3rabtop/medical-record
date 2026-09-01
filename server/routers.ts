@@ -146,6 +146,8 @@ export const appRouter = router({
           reportType: z.string().nullable().optional(),
           summaryAr: z.string().nullable().optional(),
           clinicalText: z.string().nullable().optional(),
+          hospitalVisitNumber: z.string().nullable().optional(),
+          patientIdentifier: z.string().nullable().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
@@ -186,14 +188,28 @@ export const appRouter = router({
         z.object({
           profileId: z.number().int().positive().optional(),
           examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-          results: z.array(z.object({ label: z.string(), value: z.string() })),
+          results: z.array(z.object({
+            label: z.string(),
+            value: z.string(),
+            abbr: z.string().nullable().optional(),
+            unit: z.string().nullable().optional(),
+          })),
+          contentHash: z.string().nullable().optional(),
+          hospitalVisitNumber: z.string().nullable().optional(),
+          patientIdentifier: z.string().nullable().optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
         const profileId = input.profileId
           ? await assertOwnedProfile(ctx.user.id, input.profileId)
           : await getDefaultProfileId(ctx.user.id, ctx.user.patientName);
-        return checkDuplicateReport(ctx.user.id, profileId, input.examDate, input.results);
+        return checkDuplicateReport(ctx.user.id, profileId, {
+          examDate: input.examDate,
+          results: input.results,
+          contentHash: input.contentHash,
+          hospitalVisitNumber: input.hospitalVisitNumber,
+          patientIdentifier: input.patientIdentifier,
+        });
       }),
     mergeReport: protectedProcedure
       .input(
@@ -212,13 +228,18 @@ export const appRouter = router({
               about: z.string().nullable().optional(),
             })
           ),
+          hospitalVisitNumber: z.string().nullable().optional(),
+          patientIdentifier: z.string().nullable().optional(),
         })
       )
       .mutation(({ ctx, input }) => {
         if (!ctx.user.canUpload) {
           throw new TRPCError({ code: "FORBIDDEN", message: "تم إيقاف رفع التقارير لهذا الحساب." });
         }
-        return mergeIntoVisit(ctx.user.id, input.visitId, input.results, input.updateChanged);
+        return mergeIntoVisit(ctx.user.id, input.visitId, input.results, input.updateChanged, {
+          hospitalVisitNumber: input.hospitalVisitNumber,
+          patientIdentifier: input.patientIdentifier,
+        });
       }),
     setFollowUpDate: protectedProcedure
       .input(z.object({ resultId: z.number().int().positive(), followUpDate: z.string().nullable() }))

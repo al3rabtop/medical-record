@@ -1,10 +1,21 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
+import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
 import { medicalDocuments, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
 import { isStorageConfigured, uploadObject } from "./_core/storage";
 import { compressPdf, isDigitallySigned } from "./pdfCompression";
+
+/**
+ * SHA-256 of the raw file bytes exactly as uploaded — this is the "same
+ * physical file" identity used for exact-duplicate detection. Always hash
+ * the original bytes the client sent, never the compressed/re-encoded
+ * output or any text extracted from it.
+ */
+export function hashFileContent(buffer: Buffer): string {
+  return createHash("sha256").update(buffer).digest("hex");
+}
 
 /** Raw upload guard, before compression. Independent of the AI extraction limit — storing never touches the AI. */
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -117,6 +128,10 @@ export async function storeOriginalDocument(
     throw new Error("السجل غير موجود أو لا تملك صلاحية الوصول إليه.");
   }
 
+  // Hashed BEFORE compression — this must identify the exact bytes the user
+  // uploaded, not whatever sharp/Ghostscript re-encodes them into.
+  const contentHash = hashFileContent(file.buffer);
+
   const prepared = await prepareForStorage(file.buffer, file.mimeType);
   const key = `medical-documents/${userId}/${visitId}/${nanoid(16)}.${prepared.extension}`;
   await uploadObject(key, prepared.buffer, prepared.mimeType);
@@ -127,9 +142,32 @@ export async function storeOriginalDocument(
     storageKey: key,
     mimeType: prepared.mimeType,
     fileSize: prepared.buffer.length,
+    contentHash,
   });
 
   return { id: Number(inserted[0].insertId) };
+}
+
+/**
+ * Finds an existing document with the exact same content hash, scoped to
+ * this user's own documents — the security boundary for "is this file
+ * already uploaded", since a hash match alone says nothing about ownership.
+ */
+export async function findDocumentByHash(
+  userId: number,
+  contentHash: string
+): Promise<{ documentId: number; visitId: number } | null> {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const rows = await db
+    .select({ documentId: medicalDocuments.id, visitId: medicalDocuments.visitId })
+    .from(medicalDocuments)
+    .innerJoin(medicalVisits, eq(medicalDocuments.visitId, medicalVisits.id))
+    .where(and(eq(medicalDocuments.contentHash, contentHash), eq(medicalVisits.userId, userId)))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
 /**

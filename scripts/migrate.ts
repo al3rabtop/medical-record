@@ -316,6 +316,29 @@ async function main() {
     await conn.query(`CREATE INDEX medicalVisits_userId_idx ON medicalVisits(userId)`);
   }
 
+  // --- smart report-update pipeline: hospital-sourced identifiers on the
+  // visit, and a content hash on the document, so duplicate/update detection
+  // no longer relies on exam date alone.
+  if (await tableExists(conn, "medicalVisits")) {
+    if (!(await columnExists(conn, "medicalVisits", "hospitalVisitNumber"))) {
+      console.log("[migrate] Adding medicalVisits.hospitalVisitNumber...");
+      await conn.query(`ALTER TABLE medicalVisits ADD COLUMN hospitalVisitNumber VARCHAR(64) NULL`);
+      await conn.query(`CREATE INDEX medicalVisits_hospitalVisitNumber_idx ON medicalVisits(hospitalVisitNumber)`);
+    }
+    if (!(await columnExists(conn, "medicalVisits", "patientIdentifier"))) {
+      console.log("[migrate] Adding medicalVisits.patientIdentifier...");
+      await conn.query(`ALTER TABLE medicalVisits ADD COLUMN patientIdentifier VARCHAR(64) NULL`);
+    }
+  }
+
+  if (await tableExists(conn, "medicalDocuments")) {
+    if (!(await columnExists(conn, "medicalDocuments", "contentHash"))) {
+      console.log("[migrate] Adding medicalDocuments.contentHash...");
+      await conn.query(`ALTER TABLE medicalDocuments ADD COLUMN contentHash VARCHAR(64) NULL`);
+      await conn.query(`CREATE INDEX medicalDocuments_contentHash_idx ON medicalDocuments(contentHash)`);
+    }
+  }
+
   console.log("[migrate] Done.");
   await conn.end();
 }

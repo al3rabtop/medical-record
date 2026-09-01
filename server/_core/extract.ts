@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { authenticateRequest } from "./auth";
+import { findDocumentByHash, hashFileContent } from "../documents";
 
 /**
  * Extracts lab results from an uploaded report image/PDF.
@@ -9,49 +10,103 @@ import { authenticateRequest } from "./auth";
 
 const SYSTEM_PROMPT = `أنت مساعد لاستخراج نتائج التحاليل المخبرية من صور وملفات التقارير الطبية.
 
-مهمتك: اقرأ التقرير واستخرج البيانات بدقة تامة. لا تخمّن أبداً.
+مهمتك: اقرأ التقرير واستخرج البيانات بدقة تامة عبر استدعاء الأداة المتاحة. لا تخمّن أبداً.
 
 بعض التقارير ليست أرقاماً بل نصوص وصفية (أشعة، خزعات، تقارير أطباء). في هذه الحالة:
 - اضبط "reportKind" على "narrative"
-- اترك "results" فارغة
+- اترك "results" مصفوفة فارغة
 - املأ "summaryAr" بملخص عربي مبسّط في ٢-٤ جمل يفهمه شخص غير طبيب
 - املأ "clinicalText" بنص التقرير الطبي كما ورد بالإنجليزية (الانطباع والنتائج الأساسية)
 
 أما تقارير التحاليل الرقمية فاضبط "reportKind" على "labs" واملأ "results".
 
-أعد JSON فقط بدون أي نص إضافي وبدون علامات markdown، بهذا الشكل:
-{
-  "reportKind": "labs أو narrative",
-  "reportType": "نوع التقرير بالعربية: تحاليل مختبرية | أشعة | خزعة | تقرير طبيب",
-  "summaryAr": "ملخص عربي مبسّط للتقارير الوصفية، أو null",
-  "clinicalText": "النص الطبي الأصلي للتقارير الوصفية، أو null",
-  "examDate": "YYYY-MM-DD أو null",
-  "facility": "اسم المختبر/المستشفى أو null",
-  "physician": "اسم الطبيب أو null",
-  "results": [
-    {
-      "label": "اسم الفحص بالعربية",
-      "category": "التصنيف: الدم | الكلى | الكبد | الدهون | السكر | الغدة الدرقية | الفيتامينات والمعادن | الحديد والالتهاب | البول | البروتينات | تخثر الدم | الكيمياء الحيوية | أخرى",
-      "value": "القيمة كما ظهرت",
-      "numericValue": رقم أو null,
-      "unit": "الوحدة أو null",
-      "referenceRange": "المدى المرجعي أو null",
-      "abbr": "الاسم العلمي/الإنجليزي المختصر للفحص كما يعرفه الأطباء، مثال: Ferritin أو Hemoglobin (Hb)",
-      "about": "شرح مبسّط بالعربية في جملة قصيرة جداً (١٠ كلمات كحد أقصى)",
-      "confidence": "high أو low"
-    }
-  ]
-}
-
-قواعد مهمة:
+قواعد مهمة جداً بخصوص دقة استخراج كل قيمة:
+- التزم بمطابقة كل قيمة مع اسم الفحص الصحيح في نفس الصف من الجدول. لا تخلط بين عمود القيمة وعمود المدى المرجعي أو الوحدة أو صف مجاور.
 - إذا كانت أي قيمة غير واضحة أو مشكوك فيها، ضع "confidence": "low" ولا تخمّن الرقم.
-- إذا لم تجد تاريخ الفحص، ضع null. لا تخترع تاريخاً.
-- استخرج كل الفحوصات الموجودة في التقرير.
-- لا تحسب أو تستنتج قيماً غير مكتوبة صراحة.`;
+- إذا لم تجد تاريخ الفحص، اجعله null. لا تخترع تاريخاً.
+- استخرج كل الفحوصات الموجودة في التقرير مهما كان عددها — لا يوجد حد أقصى لعدد الفحوصات، وحذف أي فحص موجود فعلياً في التقرير غير مقبول.
+- لا تحسب أو تستنتج قيماً غير مكتوبة صراحة في التقرير.
+- ابحث في ترويسة التقرير عن رقم الزيارة/الملف لدى المستشفى (Visit Number / Encounter Number / MRN)، إن وُجد، واملأ حقلي "hospitalVisitNumber" و"patientIdentifier". إن لم يوجد أي منهما اجعله null — لا تخترع رقماً.`;
+
+const EXTRACTION_TOOL_NAME = "record_medical_report";
+
+const RESULT_CATEGORIES = [
+  "الدم", "الكلى", "الكبد", "الدهون", "السكر", "الغدة الدرقية",
+  "الفيتامينات والمعادن", "الحديد والالتهاب", "البول", "البروتينات",
+  "تخثر الدم", "الكيمياء الحيوية", "أخرى",
+];
+
+const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] } as const;
+const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] } as const;
+
+/**
+ * Forces the model to return arguments matching this exact schema instead
+ * of hoping a prompt instruction produces clean JSON text. This is the
+ * "response format" / "JSON schema" enforcement mechanism: a call that
+ * doesn't match the schema simply doesn't happen — there is no markdown
+ * fence to strip, no free-text preamble to trim, and no regex "salvage" of
+ * a malformed response, because the API only returns a tool_use block once
+ * the arguments validate.
+ */
+const EXTRACTION_TOOL = {
+  name: EXTRACTION_TOOL_NAME,
+  description: "Records the structured extraction of one medical report.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "reportKind", "reportType", "summaryAr", "clinicalText",
+      "examDate", "facility", "physician",
+      "hospitalVisitNumber", "patientIdentifier", "results",
+    ],
+    properties: {
+      reportKind: { type: "string", enum: ["labs", "narrative"] },
+      reportType: nullableString,
+      summaryAr: nullableString,
+      clinicalText: nullableString,
+      examDate: nullableString,
+      facility: nullableString,
+      physician: nullableString,
+      /** The HOSPITAL's own visit/encounter number as printed on the report, not an app-internal id. */
+      hospitalVisitNumber: nullableString,
+      /** A patient identifier (e.g. MRN) as printed on the report, used only as a cross-patient safety check. */
+      patientIdentifier: nullableString,
+      results: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["label", "category", "value", "numericValue", "unit", "referenceRange", "abbr", "about", "confidence"],
+          properties: {
+            label: { type: "string" },
+            category: { type: "string", enum: RESULT_CATEGORIES },
+            value: { type: "string" },
+            numericValue: nullableNumber,
+            unit: nullableString,
+            referenceRange: nullableString,
+            abbr: nullableString,
+            about: nullableString,
+            confidence: { type: "string", enum: ["high", "low"] },
+          },
+        },
+      },
+    },
+  },
+};
 
 /** Upload guards: bound worst-case cost and latency per extraction. */
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_PAGES = 15;
+/**
+ * Generous enough for a 100+ test report (each result is a handful of short
+ * fields), while non-streaming to keep the plain-fetch call simple. If a
+ * report genuinely needs more than this, stop_reason will be "max_tokens"
+ * and the request is treated as a hard failure below — never as a valid
+ * partial report — so the user is told to split it rather than silently
+ * losing the tail of the results.
+ */
+const MAX_OUTPUT_TOKENS = 24000;
 
 /** Counts PDF pages from base64 without a parser dependency. */
 function countPdfPages(base64Data: string): number {
@@ -69,52 +124,28 @@ function countPdfPages(base64Data: string): number {
 
 type ExtractedResult = {
   label: string;
-  labelOriginal?: string;
   category: string;
   value: string;
   numericValue: number | null;
   unit: string | null;
   referenceRange: string | null;
-  abbr?: string | null;
-  about?: string | null;
+  abbr: string | null;
+  about: string | null;
   confidence: "high" | "low";
 };
 
-/** Pulls complete `results` objects out of a JSON string that was cut off mid-write. */
-function salvageResults(raw: string): ExtractedResult[] {
-  const start = raw.indexOf('"results"');
-  if (start === -1) return [];
-  const arrayStart = raw.indexOf("[", start);
-  if (arrayStart === -1) return [];
-
-  const out: ExtractedResult[] = [];
-  let depth = 0;
-  let objStart = -1;
-
-  for (let i = arrayStart; i < raw.length; i++) {
-    const ch = raw[i];
-    if (ch === "{") {
-      if (depth === 0) objStart = i;
-      depth++;
-    } else if (ch === "}") {
-      depth--;
-      if (depth === 0 && objStart !== -1) {
-        try {
-          out.push(JSON.parse(raw.slice(objStart, i + 1)));
-        } catch {
-          // Skip anything that still does not parse cleanly.
-        }
-        objStart = -1;
-      }
-    }
-  }
-  return out;
-}
-
-function matchField(raw: string, field: string): string | null {
-  const m = raw.match(new RegExp(`"${field}"\\s*:\\s*"([^"]*)"`));
-  return m ? m[1] : null;
-}
+type ExtractedReport = {
+  reportKind: "labs" | "narrative";
+  reportType: string | null;
+  summaryAr: string | null;
+  clinicalText: string | null;
+  examDate: string | null;
+  facility: string | null;
+  physician: string | null;
+  hospitalVisitNumber: string | null;
+  patientIdentifier: string | null;
+  results: ExtractedResult[];
+};
 
 export function registerExtractRoute(app: Express) {
   app.post("/api/reports/extract", async (req: Request, res: Response) => {
@@ -182,6 +213,31 @@ export function registerExtractRoute(app: Express) {
       return;
     }
 
+    // Exact-duplicate short-circuit: hash the RAW bytes before ever calling
+    // the AI. If this exact file was already stored against a visit this
+    // user owns, there is nothing new to extract — re-parsing would only
+    // spend money and (since the model is not perfectly deterministic)
+    // risk producing a slightly different reading of the same file, which
+    // would look like a false "changed value" for no real reason.
+    const rawBuffer = Buffer.from(fileData, "base64");
+    const contentHash = hashFileContent(rawBuffer);
+    try {
+      const existing = await findDocumentByHash(user.id, contentHash);
+      if (existing) {
+        res.json({
+          exactDuplicate: true,
+          existingVisitId: existing.visitId,
+          existingDocumentId: existing.documentId,
+          contentHash,
+        });
+        return;
+      }
+    } catch (err) {
+      // A lookup failure must never block a legitimate upload — fall through
+      // to normal extraction, same as if no duplicate had been found.
+      console.error("[extract] Duplicate-hash lookup failed:", err);
+    }
+
     try {
       const content = [
         isPdf
@@ -193,7 +249,7 @@ export function registerExtractRoute(app: Express) {
               type: "image",
               source: { type: "base64", media_type: mediaType, data: fileData },
             },
-        { type: "text", text: "استخرج نتائج التحاليل من هذا التقرير." },
+        { type: "text", text: "استخرج نتائج التحاليل من هذا التقرير عبر استدعاء الأداة المتاحة." },
       ];
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -205,9 +261,16 @@ export function registerExtractRoute(app: Express) {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 8000,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          // Deterministic extraction: the same report should read the same
+          // way every time, so a re-upload of the same file is recognized
+          // by its content, not treated as suspiciously "different" purely
+          // because the model sampled a different token somewhere.
+          temperature: 0,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content }],
+          tools: [EXTRACTION_TOOL],
+          tool_choice: { type: "tool", name: EXTRACTION_TOOL_NAME },
         }),
       });
 
@@ -219,49 +282,34 @@ export function registerExtractRoute(app: Express) {
       }
 
       const data = await response.json();
-      const truncated = data.stop_reason === "max_tokens";
-      const text = (data.content ?? [])
-        .map((b: any) => (b.type === "text" ? b.text : ""))
-        .join("")
-        .trim();
 
-      const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
-
-      let parsed: {
-        reportKind?: string;
-        reportType?: string | null;
-        summaryAr?: string | null;
-        clinicalText?: string | null;
-        examDate: string | null;
-        facility: string | null;
-        physician: string | null;
-        results: ExtractedResult[];
-      };
-
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch {
-        // A truncated response still contains complete result objects before the
-        // cut-off; recover those rather than discarding the whole extraction.
-        const salvaged = salvageResults(cleaned);
-        if (salvaged.length > 0) {
-          console.warn(`[extract] Recovered ${salvaged.length} results from truncated output.`);
-          parsed = {
-            examDate: matchField(cleaned, "examDate"),
-            facility: matchField(cleaned, "facility"),
-            physician: matchField(cleaned, "physician"),
-            results: salvaged,
-          };
-        } else {
-          console.error("[extract] Unparseable output:", cleaned.slice(0, 400));
-          res.status(502).json({
-            error: truncated
-              ? "التقرير كبير جداً وتعذّر استخراجه كاملاً. جرّب رفعه على أجزاء."
-              : "تعذّر قراءة نتائج التقرير. تأكد من وضوح الملف.",
-          });
-          return;
-        }
+      // A response cut off mid-generation cannot be trusted: if it was cut
+      // off while still writing the tool call, the arguments are incomplete
+      // JSON; even in the rare case they happen to parse, there is no way to
+      // know whether the model was cut off after finishing (safe) or with
+      // more results still to come (data loss). Never treat this as a
+      // partial-but-usable report — the user must split the upload instead.
+      if (data.stop_reason === "max_tokens") {
+        console.warn("[extract] Truncated at max_tokens — treating as a hard failure, not a partial report.");
+        res.status(502).json({
+          error: "التقرير كبير جداً وتعذّر استخراجه كاملاً. جرّب رفعه على أجزاء.",
+        });
+        return;
       }
+
+      const toolUse = (data.content ?? []).find(
+        (b: any) => b.type === "tool_use" && b.name === EXTRACTION_TOOL_NAME
+      );
+
+      if (!toolUse || typeof toolUse.input !== "object" || toolUse.input === null) {
+        console.error("[extract] No valid tool_use block in response:", JSON.stringify(data).slice(0, 400));
+        res.status(502).json({
+          error: "تعذّر قراءة نتائج التقرير. تأكد من وضوح الملف.",
+        });
+        return;
+      }
+
+      const parsed = toolUse.input as ExtractedReport;
 
       const isNarrative =
         parsed.reportKind === "narrative" ||
@@ -279,12 +327,14 @@ export function registerExtractRoute(app: Express) {
         examDate: parsed.examDate ?? null,
         facility: parsed.facility ?? null,
         physician: parsed.physician ?? null,
+        hospitalVisitNumber: parsed.hospitalVisitNumber ?? null,
+        patientIdentifier: parsed.patientIdentifier ?? null,
         results: Array.isArray(parsed.results) ? parsed.results : [],
         reportKind: isNarrative ? "narrative" : "labs",
         reportType: parsed.reportType ?? null,
         summaryAr: parsed.summaryAr ?? null,
         clinicalText: parsed.clinicalText ?? null,
-        truncated,
+        contentHash,
       });
     } catch (err) {
       console.error("[extract] Unexpected error:", err);

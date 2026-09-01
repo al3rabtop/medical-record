@@ -56,6 +56,23 @@ describe("resolveTestCode — tests that must never be merged", () => {
     expect(code("الحمضات")).toBe("eosinophils");
   });
 
+  it("resolves '#'/'%' lab shorthand for differential counts to the correct sibling, not the bare code", () => {
+    // Regression test: normalisation strips punctuation, so "EOS%"/"EOS#" and
+    // bare "EOS" used to collapse to the same lookup key, and the percent
+    // alias's Object.entries position silently overwrote the bare one —
+    // "EOS#" (absolute count) was misresolved as eosinophils_percent, which
+    // showed up as a false "changed value" between two reports using
+    // different shorthand for the same underlying (correct, unchanged) test.
+    expect(code("EOS")).toBe("eosinophils");
+    expect(code("EOS%")).toBe("eosinophils_percent");
+    expect(code("EOS#")).toBe("eosinophils_absolute");
+    expect(code("Eosinophils Absolute Count")).toBe("eosinophils_absolute");
+
+    expect(code("NEUT")).toBe("neutrophils");
+    expect(code("NEUT%")).toBe("neutrophils_percent");
+    expect(code("NEUT#")).toBe("neutrophils_absolute");
+  });
+
   it("keeps MCH/MCHC separate from plain haemoglobin", () => {
     expect(code("متوسط محتوى الهيموغلوبين")).toBe("mch");
     expect(code("متوسط تركيز الهيموغلوبين")).toBe("mchc");

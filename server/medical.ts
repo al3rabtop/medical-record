@@ -3,6 +3,8 @@ import { medicalResults, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
 import { classifyMedicalRecord, deriveTrend, interpretResultTrend, type MedicalStatus, type TrendInterpretation } from "../shared/medical";
 import { resolveTestCode } from "../shared/testCanon";
+import { compareResults, valuesAreEqual } from "../shared/medicalCompare";
+import { findDocumentByHash } from "./documents";
 
 export type ResultCard = {
   code: string;
@@ -276,6 +278,8 @@ export async function saveReviewedReport(
     reportType?: string | null;
     summaryAr?: string | null;
     clinicalText?: string | null;
+    hospitalVisitNumber?: string | null;
+    patientIdentifier?: string | null;
   }
 ) {
   const db = await getDb();
@@ -293,6 +297,8 @@ export async function saveReviewedReport(
     userId,
     profileId,
     visitNumber,
+    hospitalVisitNumber: input.hospitalVisitNumber?.slice(0, 64) || null,
+    patientIdentifier: input.patientIdentifier?.slice(0, 64) || null,
     examDate: input.examDate,
     reportDate: input.examDate,
     reportType: input.reportType || "تحاليل مختبرية",
@@ -469,42 +475,121 @@ export async function getVisitResultsForUser(userId: number, visitId: number) {
 }
 
 export type DuplicateCheckResult = {
-  status: "new" | "exact_duplicate" | "partial";
+  status: "new" | "exact_duplicate" | "partial" | "file_duplicate" | "conflict";
   visitId: number | null;
   examDate: string;
   existingCount: number;
-  /** Tests in the upload that are not yet recorded for this date. */
+  /** Tests in the upload that are not yet recorded for this visit. */
   newLabels: string[];
   /** Tests already recorded with the same value — nothing to do. */
   identicalLabels: string[];
   /** Tests already recorded but with a different value; the user decides. */
-  changed: Array<{ label: string; oldValue: string; newValue: string }>;
+  changed: Array<{ label: string; oldValue: string; newValue: string; unit: string | null }>;
+  /** What actually matched this to an existing visit — surfaced so the UI can be precise instead of just saying "duplicate". */
+  matchedBy?: "hospitalVisitNumber" | "examDate";
 };
 
 /**
- * Compares an extracted report against what is already stored for the same
- * exam date, so a re-upload never silently duplicates or overwrites history.
+ * Decides whether an extracted report belongs to a visit already on record,
+ * and if so, what is actually new or changed about it. Exam date alone is
+ * never sufficient — two different hospital visits can share a date, and
+ * the same hospital visit can legitimately produce several separate
+ * documents over time (a pending test released later, a correction). The
+ * hospital's own visit/encounter number (when the report has one) is the
+ * strongest signal; exam date is only a fallback for reports that don't.
  */
 export async function checkDuplicateReport(
   userId: number,
   profileId: number,
-  examDate: string,
-  results: Array<{ label: string; value: string }>
+  input: {
+    examDate: string;
+    results: Array<{ label: string; value: string; abbr?: string | null; unit?: string | null }>;
+    contentHash?: string | null;
+    hospitalVisitNumber?: string | null;
+    patientIdentifier?: string | null;
+  }
 ): Promise<DuplicateCheckResult> {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+  const { examDate, results } = input;
 
-  const visits = await db
-    .select({ id: medicalVisits.id })
-    .from(medicalVisits)
-    .where(and(
-      eq(medicalVisits.userId, userId),
-      eq(medicalVisits.profileId, profileId),
-      eq(medicalVisits.examDate, examDate)
-    ))
-    .limit(1);
+  // Defense in depth: the primary exact-file gate runs before the AI is
+  // ever called (see server/_core/extract.ts), but a hash is checked again
+  // here in case this is ever reached some other way.
+  if (input.contentHash) {
+    const hashMatch = await findDocumentByHash(userId, input.contentHash);
+    if (hashMatch) {
+      return {
+        status: "file_duplicate",
+        visitId: hashMatch.visitId,
+        examDate,
+        existingCount: 0,
+        newLabels: [],
+        identicalLabels: [],
+        changed: [],
+      };
+    }
+  }
 
-  if (visits.length === 0) {
+  let visitRow: { id: number; patientIdentifier: string | null } | null = null;
+  let matchedBy: DuplicateCheckResult["matchedBy"];
+
+  if (input.hospitalVisitNumber) {
+    const rows = await db
+      .select({ id: medicalVisits.id, patientIdentifier: medicalVisits.patientIdentifier })
+      .from(medicalVisits)
+      .where(and(
+        eq(medicalVisits.userId, userId),
+        eq(medicalVisits.profileId, profileId),
+        eq(medicalVisits.hospitalVisitNumber, input.hospitalVisitNumber)
+      ))
+      .limit(1);
+    if (rows.length > 0) {
+      visitRow = rows[0];
+      matchedBy = "hospitalVisitNumber";
+
+      // Never auto-merge across a patient-identifier mismatch — surface it
+      // for manual review instead of silently attaching one patient's
+      // report to another patient's visit just because a visit number
+      // happened to match (visit numbers can be reused by a hospital, or
+      // misread by extraction).
+      if (visitRow.patientIdentifier && input.patientIdentifier && visitRow.patientIdentifier !== input.patientIdentifier) {
+        return {
+          status: "conflict",
+          visitId: visitRow.id,
+          examDate,
+          existingCount: 0,
+          newLabels: [],
+          identicalLabels: [],
+          changed: [],
+          matchedBy: "hospitalVisitNumber",
+        };
+      }
+    }
+  }
+
+  // Exam-date fallback only when the new report carries no hospital visit
+  // number at all. If it DOES have one and it simply didn't match anything
+  // above, that is confidently a different visit — falling back to exam
+  // date here would risk merging two genuinely different hospital visits
+  // that just happen to share a date.
+  if (!visitRow && !input.hospitalVisitNumber) {
+    const rows = await db
+      .select({ id: medicalVisits.id, patientIdentifier: medicalVisits.patientIdentifier })
+      .from(medicalVisits)
+      .where(and(
+        eq(medicalVisits.userId, userId),
+        eq(medicalVisits.profileId, profileId),
+        eq(medicalVisits.examDate, examDate)
+      ))
+      .limit(1);
+    if (rows.length > 0) {
+      visitRow = rows[0];
+      matchedBy = "examDate";
+    }
+  }
+
+  if (!visitRow) {
     return {
       status: "new",
       visitId: null,
@@ -516,41 +601,22 @@ export async function checkDuplicateReport(
     };
   }
 
-  const visitId = visits[0].id;
   const existing = await db
     .select({ code: medicalResults.code, label: medicalResults.label, valueText: medicalResults.valueText })
     .from(medicalResults)
-    .where(eq(medicalResults.visitId, visitId));
+    .where(eq(medicalResults.visitId, visitRow.id));
 
-  // Match by canonical code, not raw label text, so "TSH" and "الغدة
-  // الدرقية TSH" from different labs are recognised as the same test.
-  const norm = (v: string) => v.trim().toLowerCase();
-  const byCode = new Map(existing.map(e => [e.code, e.valueText]));
-
-  const newLabels: string[] = [];
-  const identicalLabels: string[] = [];
-  const changed: DuplicateCheckResult["changed"] = [];
-
-  for (const r of results) {
-    const code = resolveTestCode(r.label);
-    const prior = byCode.get(code);
-    if (prior === undefined) {
-      newLabels.push(r.label);
-    } else if (norm(prior) === norm(r.value)) {
-      identicalLabels.push(r.label);
-    } else {
-      changed.push({ label: r.label, oldValue: prior, newValue: r.value });
-    }
-  }
+  const comparison = compareResults(existing, results);
 
   return {
-    status: newLabels.length === 0 && changed.length === 0 ? "exact_duplicate" : "partial",
-    visitId,
+    status: comparison.newTests.length === 0 && comparison.changedTests.length === 0 ? "exact_duplicate" : "partial",
+    visitId: visitRow.id,
     examDate,
     existingCount: existing.length,
-    newLabels,
-    identicalLabels,
-    changed,
+    newLabels: comparison.newTests.map(t => t.label),
+    identicalLabels: comparison.identicalLabels,
+    changed: comparison.changedTests.map(c => ({ label: c.label, oldValue: c.oldValue, newValue: c.newValue, unit: c.unit })),
+    matchedBy,
   };
 }
 
@@ -559,18 +625,48 @@ export async function mergeIntoVisit(
   userId: number,
   visitId: number,
   results: ReviewedResult[],
-  updateChanged: boolean
+  updateChanged: boolean,
+  identifiers?: { hospitalVisitNumber?: string | null; patientIdentifier?: string | null }
 ) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
 
   const owned = await db
-    .select({ id: medicalVisits.id })
+    .select({ id: medicalVisits.id, hospitalVisitNumber: medicalVisits.hospitalVisitNumber, patientIdentifier: medicalVisits.patientIdentifier })
     .from(medicalVisits)
     .where(and(eq(medicalVisits.id, visitId), eq(medicalVisits.userId, userId)))
     .limit(1);
 
   if (owned.length === 0) throw new Error("السجل غير موجود أو لا تملك صلاحية تعديله.");
+
+  // Enforced here too, not just in checkDuplicateReport's advisory check —
+  // a client could otherwise call this mutation directly with a visitId it
+  // owns and results meant for a different patient. Only blocks when BOTH
+  // sides actually have an identifier and they disagree; a visit with none
+  // recorded yet is not treated as a conflict.
+  if (
+    owned[0].patientIdentifier &&
+    identifiers?.patientIdentifier &&
+    owned[0].patientIdentifier !== identifiers.patientIdentifier
+  ) {
+    throw new Error("رقم الزيارة يتبع سجل مريض مختلف — لا يمكن دمج هذا التقرير تلقائياً.");
+  }
+
+  // Backfill only — never overwrite an identifier this visit already has,
+  // and never write one that conflicts with what is already stored
+  // (checkDuplicateReport already refused to reach this point for a
+  // conflicting patientIdentifier, but a visit created before this feature
+  // existed may simply have no hospitalVisitNumber recorded yet).
+  const patch: Partial<typeof medicalVisits.$inferInsert> = {};
+  if (!owned[0].hospitalVisitNumber && identifiers?.hospitalVisitNumber) {
+    patch.hospitalVisitNumber = identifiers.hospitalVisitNumber.slice(0, 64);
+  }
+  if (!owned[0].patientIdentifier && identifiers?.patientIdentifier) {
+    patch.patientIdentifier = identifiers.patientIdentifier.slice(0, 64);
+  }
+  if (Object.keys(patch).length > 0) {
+    await db.update(medicalVisits).set(patch).where(eq(medicalVisits.id, visitId));
+  }
 
   const existing = await db
     .select({
@@ -582,7 +678,6 @@ export async function mergeIntoVisit(
     .from(medicalResults)
     .where(eq(medicalResults.visitId, visitId));
 
-  const norm = (v: string) => v.trim().toLowerCase();
   const byCode = new Map(existing.map(e => [e.code, e]));
   const usedCodes = new Set(existing.map(e => e.code));
 
@@ -595,7 +690,7 @@ export async function mergeIntoVisit(
     const prior = byCode.get(code);
 
     if (prior) {
-      if (!updateChanged || norm(prior.valueText) === norm(r.value)) continue;
+      if (!updateChanged || valuesAreEqual(prior.valueText, r.value)) continue;
       await db
         .update(medicalResults)
         .set({
