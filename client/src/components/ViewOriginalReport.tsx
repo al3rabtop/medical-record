@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { FileText, Loader2, TriangleAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatMedicalDate } from "@/lib/medical-ui";
+import { useLocale } from "@/contexts/LocaleContext";
 
 const BUTTON_CLASS =
   "flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-wait disabled:opacity-70";
@@ -18,8 +19,8 @@ const FILE_TYPE_LABELS: Record<string, string> = {
   "image/heif": "HEIF",
 };
 
-function fileTypeLabel(mimeType: string) {
-  return FILE_TYPE_LABELS[mimeType] ?? mimeType.split("/")[1]?.toUpperCase() ?? "ملف";
+function fileTypeLabel(mimeType: string, fallback: string) {
+  return FILE_TYPE_LABELS[mimeType] ?? mimeType.split("/")[1]?.toUpperCase() ?? fallback;
 }
 
 /**
@@ -34,6 +35,7 @@ function fileTypeLabel(mimeType: string) {
  * picker instead of guessing which one the user wants.
  */
 export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
+  const { t, dir, locale } = useLocale();
   // Callers (e.g. the test-detail card) rebuild this array on every render,
   // so it's normalized and re-derived by value here rather than by
   // reference — dedup + sort keeps the query input, and therefore its
@@ -61,7 +63,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
     return (
       <button type="button" disabled className={BUTTON_CLASS}>
         <Loader2 className="h-4 w-4 animate-spin" />
-        عرض التقرير الأصلي
+        {t.documentViewer.viewOriginalReport}
       </button>
     );
   }
@@ -70,7 +72,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
     return (
       <button type="button" onClick={() => docs.refetch()} className={BUTTON_CLASS}>
         <TriangleAlert className="h-4 w-4" />
-        تعذّر تحميل الملف الأصلي — إعادة المحاولة
+        {t.documentViewer.loadFailedRetry}
       </button>
     );
   }
@@ -79,7 +81,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
     return (
       <a href={`/api/documents/${docs.data[0].id}`} target="_blank" rel="noopener noreferrer" className={BUTTON_CLASS}>
         <FileText className="h-4 w-4" />
-        عرض التقرير الأصلي
+        {t.documentViewer.viewOriginalReport}
       </a>
     );
   }
@@ -88,14 +90,14 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
     <>
       <button type="button" onClick={() => setPickerOpen(true)} className={BUTTON_CLASS}>
         <FileText className="h-4 w-4" />
-        عرض التقرير الأصلي ({docs.data.length} ملفات)
+        {t.documentViewer.viewOriginalReportCount(docs.data.length)}
       </button>
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent dir="rtl" className="border-slate-200 bg-[#fbfcfb] sm:max-w-md">
-          <DialogHeader className="text-right">
-            <DialogTitle className="text-lg font-extrabold text-slate-950">اختر ملفاً لعرضه</DialogTitle>
+        <DialogContent dir={dir} className="border-slate-200 bg-[#fbfcfb] sm:max-w-md">
+          <DialogHeader className="text-right rtl:text-right ltr:text-left">
+            <DialogTitle className="text-lg font-extrabold text-slate-950">{t.documentViewer.chooseFileTitle}</DialogTitle>
             <DialogDescription className="text-sm text-slate-600">
-              يحتوي هذا السجل على {docs.data.length} ملفات تقارير أصلية.
+              {t.documentViewer.containsFilesDescription(docs.data.length)}
             </DialogDescription>
           </DialogHeader>
           <div className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto">
@@ -110,12 +112,12 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-extrabold text-slate-900">
-                      {doc.originalName || `الملف ${i + 1}`}
+                      {doc.originalName || t.documentViewer.fileFallbackName(i + 1)}
                     </p>
                     <p className="mt-0.5 flex items-center gap-2 text-xs font-semibold text-slate-500">
-                      <span>تاريخ الفحص: {formatMedicalDate(doc.examDate)}</span>
+                      <span>{t.documentViewer.examDateLabel} {formatMedicalDate(doc.examDate, locale)}</span>
                       <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-extrabold text-slate-600">
-                        {fileTypeLabel(doc.mimeType)}
+                        {fileTypeLabel(doc.mimeType, t.documentViewer.genericFileType)}
                       </span>
                     </p>
                   </div>
@@ -127,7 +129,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
                   onClick={() => setPickerOpen(false)}
                   className="shrink-0 rounded-lg bg-teal-800 px-3 py-2 text-xs font-extrabold text-white transition hover:bg-teal-900"
                 >
-                  عرض
+                  {t.common.view}
                 </a>
               </div>
             ))}

@@ -13,6 +13,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useProfile } from "@/contexts/ProfileContext";
 import { UploadTroubleshooting } from "@/components/UploadTroubleshooting";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type Row = {
   label: string;
@@ -33,6 +34,7 @@ const CATEGORIES = [
 ];
 
 export default function Upload() {
+  const { t } = useLocale();
   const [, navigate] = useLocation();
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -78,10 +80,10 @@ export default function Upload() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error ?? "تعذّر حفظ نسخة من التقرير الأصلي.");
+        toast.error(data.error ?? t.upload.documentSaveError);
       }
     } catch {
-      toast.error("تعذّر حفظ نسخة من التقرير الأصلي.");
+      toast.error(t.upload.documentSaveError);
     }
   }
 
@@ -124,7 +126,7 @@ export default function Upload() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "تعذّر تحليل التقرير");
+        setError(data.error ?? t.upload.genericAnalyzeError);
         setStage("pick");
         return;
       }
@@ -146,7 +148,7 @@ export default function Upload() {
       );
       setStage("review");
     } catch {
-      setError("تعذّر قراءة الملف");
+      setError(t.upload.genericReadError);
       setStage("pick");
     }
   }
@@ -158,13 +160,13 @@ export default function Upload() {
   async function handleSave() {
     setError(null);
     if (!examDate) {
-      setError("يرجى إدخال تاريخ الفحص");
+      setError(t.upload.examDateRequired);
       return;
     }
     if (reportKind === "labs") {
       const invalid = rows.find(r => !r.label.trim() || !r.value.trim());
       if (invalid) {
-        setError("يرجى تعبئة اسم الفحص والقيمة لكل صف، أو حذف الصفوف الناقصة");
+        setError(t.upload.fillLabelAndValue);
         return;
       }
     }
@@ -226,14 +228,13 @@ export default function Upload() {
   return (
     <PortalShell>
       <div className="container py-8">
-        <h1 className="mb-1 text-2xl font-extrabold text-teal-950">رفع تقرير طبي</h1>
+        <h1 className="mb-1 text-2xl font-extrabold text-teal-950">{t.upload.pageTitle}</h1>
         <p className="mb-6 text-sm text-slate-500">
-          ارفع صورة أو ملف PDF للتقرير، وسيتم استخراج النتائج لمراجعتها قبل الحفظ.
-          تُحفظ نسخة خاصة من الملف الأصلي بشكل آمن ليتسنى الرجوع إليها لاحقاً للتحقق من النتائج.
+          {t.upload.pageDescription}
         </p>
         {activeProfile && (
           <p className="mb-5 rounded-xl bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-900">
-            سيُحفظ هذا التقرير في ملف: {activeProfile.name}
+            {t.upload.willSaveToProfile(activeProfile.name)}
           </p>
         )}
 
@@ -266,14 +267,14 @@ export default function Upload() {
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-10 text-sm font-bold text-slate-700 transition hover:border-teal-700 hover:text-teal-800"
             >
               <UploadIcon className="h-5 w-5" />
-              اختر ملفاً من الجهاز
+              {t.upload.chooseFile}
             </button>
             <button
               onClick={() => cameraRef.current?.click()}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-10 text-sm font-bold text-slate-700 transition hover:border-teal-700 hover:text-teal-800"
             >
               <Camera className="h-5 w-5" />
-              التقاط صورة بالكاميرا
+              {t.upload.takePhoto}
             </button>
           </div>
         )}
@@ -283,7 +284,7 @@ export default function Upload() {
         {stage === "loading" && (
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white py-16">
             <Loader2 className="h-7 w-7 animate-spin text-teal-800" />
-            <p className="text-sm font-bold text-slate-600">جارٍ قراءة التقرير…</p>
+            <p className="text-sm font-bold text-slate-600">{t.upload.readingReport}</p>
           </div>
         )}
 
@@ -293,21 +294,20 @@ export default function Upload() {
               <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
                 <p className="text-base font-extrabold text-amber-900">
                   {dup.status === "exact_duplicate"
-                    ? "هذا التقرير مرفوع مسبقاً"
-                    : "يوجد تقرير بنفس التاريخ"}
+                    ? t.upload.duplicateExact
+                    : t.upload.duplicatePartial}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-amber-800">
-                  لديك سجل بتاريخ <span className="font-bold" dir="ltr">{dup.examDate}</span> يحتوي
-                  على {dup.existingCount} فحصاً.
+                  {t.upload.duplicateHasRecord(dup.examDate, dup.existingCount)}
                   {dup.status === "exact_duplicate"
-                    ? " وجميع الفحوصات في هذا الملف موجودة فيه بنفس القيم."
+                    ? t.upload.duplicateAllIdentical
                     : ""}
                 </p>
 
                 {dup.newLabels.length > 0 && (
                   <div className="mt-4 rounded-xl bg-white p-3">
                     <p className="text-sm font-bold text-emerald-800">
-                      {dup.newLabels.length} فحص جديد غير موجود في السجل:
+                      {t.upload.newTestsNotInRecord(dup.newLabels.length)}
                     </p>
                     <p className="mt-1 text-xs leading-6 text-slate-600">{dup.newLabels.join("، ")}</p>
                   </div>
@@ -316,7 +316,7 @@ export default function Upload() {
                 {dup.changed.length > 0 && (
                   <div className="mt-3 rounded-xl bg-white p-3">
                     <p className="text-sm font-bold text-amber-800">
-                      {dup.changed.length} فحص موجود بقيمة مختلفة:
+                      {t.upload.existingWithDifferentValue(dup.changed.length)}
                     </p>
                     <ul className="mt-2 space-y-1 text-xs text-slate-600">
                       {dup.changed.map(c => (
@@ -331,7 +331,7 @@ export default function Upload() {
 
                 {dup.identicalLabels.length > 0 && (
                   <p className="mt-3 text-xs text-amber-700">
-                    {dup.identicalLabels.length} فحص موجود بنفس القيمة وسيتم تجاهله.
+                    {t.upload.identicalWillBeIgnored(dup.identicalLabels.length)}
                   </p>
                 )}
 
@@ -347,7 +347,7 @@ export default function Upload() {
                       className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-60"
                     >
                       {mergeReport.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                      أضف الفحوصات الجديدة فقط ({dup.newLabels.length})
+                      {t.upload.addNewTestsOnly(dup.newLabels.length)}
                     </button>
                   )}
 
@@ -361,7 +361,7 @@ export default function Upload() {
                       disabled={mergeReport.isPending}
                       className="rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
                     >
-                      حدّث القيم المختلفة أيضاً
+                      {t.upload.updateChangedToo}
                     </button>
                   )}
 
@@ -369,7 +369,7 @@ export default function Upload() {
                     onClick={() => { setDup(null); setStage("pick"); setRows([]); setPendingFile(null); }}
                     className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
                   >
-                    إلغاء
+                    {t.common.cancel}
                   </button>
 
                   {dup.status === "partial" && (
@@ -377,7 +377,7 @@ export default function Upload() {
                       onClick={() => { setDup(null); doSave(); }}
                       className="rounded-xl px-3 py-2.5 text-xs font-bold text-slate-500 underline"
                     >
-                      احفظه كسجل منفصل
+                      {t.upload.saveAsSeparateRecord}
                     </button>
                   )}
                 </div>
@@ -387,19 +387,19 @@ export default function Upload() {
             {truncated && (
               <div className="flex items-start gap-2 rounded-xl bg-orange-50 px-4 py-3 text-sm font-bold text-orange-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                التقرير طويل وقد لا تكون كل الفحوصات ظاهرة أدناه. راجع القائمة، ثم ارفع بقية الصفحات في تقرير منفصل.
+                {t.upload.reportTooLong}
               </div>
             )}
             {lowConfidenceCount > 0 && (
               <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                {lowConfidenceCount} قيمة غير واضحة — المحدّدة بالأصفر تحتاج مراجعتك.
+                {t.upload.lowConfidenceWarning(lowConfidenceCount)}
               </div>
             )}
 
             <div className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700">تاريخ الفحص *</label>
+                <label className="text-xs font-bold text-slate-700">{t.upload.examDateLabel}</label>
                 <input
                   type="date"
                   value={examDate}
@@ -408,21 +408,21 @@ export default function Upload() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700">المختبر / المستشفى</label>
+                <label className="text-xs font-bold text-slate-700">{t.upload.facilityLabel}</label>
                 <input
                   value={facility}
                   onChange={e => setFacility(e.target.value)}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-700"
-                  placeholder="اختياري"
+                  placeholder={t.common.optional}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-slate-700">الطبيب</label>
+                <label className="text-xs font-bold text-slate-700">{t.upload.physicianLabel}</label>
                 <input
                   value={physician}
                   onChange={e => setPhysician(e.target.value)}
                   className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-700"
-                  placeholder="اختياري"
+                  placeholder={t.common.optional}
                 />
               </div>
             </div>
@@ -430,15 +430,15 @@ export default function Upload() {
             {reportKind === "narrative" && (
               <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5">
                 <p className="text-sm font-extrabold text-slate-900">
-                  {reportType ?? "تقرير وصفي"} — راجع النص قبل الحفظ
+                  {reportType ?? t.upload.narrativeReportFallback} {t.upload.reviewBeforeSaving}
                 </p>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-700">ملخص مبسّط بالعربية</span>
+                  <span className="text-xs font-bold text-slate-700">{t.upload.simplifiedSummaryLabel}</span>
                   <textarea value={summaryAr} onChange={e => setSummaryAr(e.target.value)} rows={4}
                     className="rounded-xl border border-slate-200 px-3 py-2 text-sm leading-6 outline-none focus:border-teal-700" />
                 </label>
                 <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-bold text-slate-700">النص الطبي الأصلي (للطبيب)</span>
+                  <span className="text-xs font-bold text-slate-700">{t.upload.originalClinicalTextLabel}</span>
                   <textarea value={clinicalText} onChange={e => setClinicalText(e.target.value)} rows={6} dir="ltr"
                     className="rounded-xl border border-slate-200 px-3 py-2 text-xs leading-5 outline-none focus:border-teal-700" />
                 </label>
@@ -449,11 +449,11 @@ export default function Upload() {
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
                   <tr>
-                    <th className="p-3 text-right font-bold">الفحص</th>
-                    <th className="p-3 text-right font-bold">التصنيف</th>
-                    <th className="p-3 text-right font-bold">القيمة</th>
-                    <th className="p-3 text-right font-bold">الوحدة</th>
-                    <th className="p-3 text-right font-bold">المدى المرجعي</th>
+                    <th className="p-3 text-start font-bold">{t.table.test}</th>
+                    <th className="p-3 text-start font-bold">{t.common.category}</th>
+                    <th className="p-3 text-start font-bold">{t.common.value}</th>
+                    <th className="p-3 text-start font-bold">{t.visitEditor.unit}</th>
+                    <th className="p-3 text-start font-bold">{t.table.referenceRange}</th>
                     <th className="p-3"></th>
                   </tr>
                 </thead>
@@ -476,7 +476,7 @@ export default function Upload() {
                             className="w-full min-w-28 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-teal-700"
                           >
                             {CATEGORIES.map(c => (
-                              <option key={c} value={c}>{c}</option>
+                              <option key={c} value={c}>{t.categoryLabels[c] ?? c}</option>
                             ))}
                           </select>
                         </td>
@@ -508,7 +508,7 @@ export default function Upload() {
                             value={r.referenceRange ?? ""}
                             onChange={e => updateRow(i, { referenceRange: e.target.value })}
                             className="w-full min-w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-teal-700"
-                            placeholder="مثال: 13-150"
+                            placeholder={t.upload.referenceRangeExample}
                             dir="ltr"
                           />
                         </td>
@@ -516,7 +516,7 @@ export default function Upload() {
                           <button
                             onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}
                             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                            title="حذف الصف"
+                            title={t.upload.deleteRow}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -539,7 +539,7 @@ export default function Upload() {
                 ) : (
                   <CheckCircle2 className="h-4 w-4" />
                 )}
-                {reportKind === "narrative" ? "حفظ التقرير" : `حفظ النتائج (${rows.length})`}
+                {reportKind === "narrative" ? t.upload.saveReport : t.upload.saveResultsCount(rows.length)}
               </button>
               <button
                 onClick={() => {
@@ -551,12 +551,12 @@ export default function Upload() {
                 }}
                 className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
               >
-                إلغاء
+                {t.common.cancel}
               </button>
             </div>
 
             <p className="text-xs text-slate-500">
-              راجع القيم جيداً قبل الحفظ. الحالة (مطمئن / يحتاج متابعة) تُحسب تلقائياً من المدى المرجعي.
+              {t.upload.reviewNote}
             </p>
           </div>
         )}

@@ -1,7 +1,21 @@
 export type MedicalStatus = "reassuring" | "follow_up" | "unavailable";
 export type Trend = "ارتفع" | "انخفض" | "مستقر" | "بيانات غير متوفرة";
+/** Identifies which branch of interpretResultTrend fired, independent of language — the UI looks up its own localized label/detail text by this key instead of using the Arabic label/detail below directly. */
+export type TrendInterpretationKey =
+  | "comparison_incomplete"
+  | "stable_reassuring"
+  | "stable_follow_up"
+  | "improved_into_reassuring"
+  | "worsened_into_follow_up"
+  | "improving_gradually"
+  | "improved_from_previous"
+  | "worsening_follow_up"
+  | "worsened_still_reassuring"
+  | "no_reliable_rule";
+
 export type TrendInterpretation = {
   tone: "improving" | "worsening" | "stable" | "unavailable";
+  key: TrendInterpretationKey;
   label: string;
   detail: string;
 };
@@ -64,21 +78,21 @@ export function interpretResultTrend({
   previousStatus: MedicalStatus | undefined;
 }): TrendInterpretation {
   if (current === null || previous === null) {
-    return { tone: "unavailable", label: "بيانات المقارنة غير مكتملة", detail: "تظهر القيمة كما وردت، لكن لا توجد قيم رقمية قابلة للمقارنة." };
+    return { tone: "unavailable", key: "comparison_incomplete", label: "بيانات المقارنة غير مكتملة", detail: "تظهر القيمة كما وردت، لكن لا توجد قيم رقمية قابلة للمقارنة." };
   }
 
   if (Math.abs(current - previous) < 0.001) {
     return currentStatus === "reassuring"
-      ? { tone: "stable", label: "مستقر ومطمئن", detail: "لم يتغير عن القياس السابق المتاح." }
-      : { tone: "stable", label: "مستقر ويحتاج متابعة", detail: "لم يتغير عن القياس السابق، مع استمرار الحاجة للمتابعة." };
+      ? { tone: "stable", key: "stable_reassuring", label: "مستقر ومطمئن", detail: "لم يتغير عن القياس السابق المتاح." }
+      : { tone: "stable", key: "stable_follow_up", label: "مستقر ويحتاج متابعة", detail: "لم يتغير عن القياس السابق، مع استمرار الحاجة للمتابعة." };
   }
 
   if (currentStatus === "reassuring" && previousStatus === "follow_up") {
-    return { tone: "improving", label: "تحسن مقارنة بالسابق", detail: "أحدث قيمة أصبحت ضمن تصنيف المتابعة المطمئن." };
+    return { tone: "improving", key: "improved_into_reassuring", label: "تحسن مقارنة بالسابق", detail: "أحدث قيمة أصبحت ضمن تصنيف المتابعة المطمئن." };
   }
 
   if (currentStatus === "follow_up" && previousStatus === "reassuring") {
-    return { tone: "worsening", label: "تغير ويحتاج متابعة", detail: "أحدث قيمة انتقلت إلى تصنيف يحتاج متابعة مقارنة بالقياس السابق." };
+    return { tone: "worsening", key: "worsened_into_follow_up", label: "تغير ويحتاج متابعة", detail: "أحدث قيمة انتقلت إلى تصنيف يحتاج متابعة مقارنة بالقياس السابق." };
   }
 
   const direction = current > previous ? "up" : "down";
@@ -87,15 +101,15 @@ export function interpretResultTrend({
 
   if (isFavorable) {
     return currentStatus === "follow_up"
-      ? { tone: "improving", label: "يتحسن تدريجياً", detail: "يتجه في اتجاه أفضل مقارنة بالقياس السابق، لكنه ما زال ضمن ما يحتاج متابعة." }
-      : { tone: "improving", label: "تحسن مقارنة بالسابق", detail: "يتجه في اتجاه أفضل مقارنة بالقياس السابق." };
+      ? { tone: "improving", key: "improving_gradually", label: "يتحسن تدريجياً", detail: "يتجه في اتجاه أفضل مقارنة بالقياس السابق، لكنه ما زال ضمن ما يحتاج متابعة." }
+      : { tone: "improving", key: "improved_from_previous", label: "تحسن مقارنة بالسابق", detail: "يتجه في اتجاه أفضل مقارنة بالقياس السابق." };
   }
 
   if (isUnfavorable) {
     return currentStatus === "follow_up"
-      ? { tone: "worsening", label: "يتراجع ويحتاج متابعة", detail: "يتجه في اتجاه أقل ملاءمة مقارنة بالقياس السابق." }
-      : { tone: "worsening", label: "يتراجع وما زال مطمئناً", detail: "تغيرت القيمة عن السابق في اتجاه أقل ملاءمة، لكنها ما زالت ضمن تصنيف المتابعة المطمئن." };
+      ? { tone: "worsening", key: "worsening_follow_up", label: "يتراجع ويحتاج متابعة", detail: "يتجه في اتجاه أقل ملاءمة مقارنة بالقياس السابق." }
+      : { tone: "worsening", key: "worsened_still_reassuring", label: "يتراجع وما زال مطمئناً", detail: "تغيرت القيمة عن السابق في اتجاه أقل ملاءمة، لكنها ما زالت ضمن تصنيف المتابعة المطمئن." };
   }
 
-  return { tone: "unavailable", label: "بيانات المقارنة غير مكتملة", detail: "توجد قيمة سابقة، لكن لا توجد قاعدة موثوقة لوصف اتجاه هذا المؤشر بتحسن أو تراجع." };
+  return { tone: "unavailable", key: "no_reliable_rule", label: "بيانات المقارنة غير مكتملة", detail: "توجد قيمة سابقة، لكن لا توجد قاعدة موثوقة لوصف اتجاه هذا المؤشر بتحسن أو تراجع." };
 }

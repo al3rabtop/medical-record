@@ -4,6 +4,7 @@ import { getTestInfo } from "@shared/testInfo";
 import { ArrowRight, Printer } from "lucide-react";
 import { useLocation } from "wouter";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useLocale } from "@/contexts/LocaleContext";
 
 /**
  * Print-oriented summary. Rendering in the browser keeps Arabic shaping and
@@ -12,6 +13,7 @@ import { useProfile } from "@/contexts/ProfileContext";
  */
 export default function Report() {
   const { profileId } = useProfile();
+  const { t, dir, locale } = useLocale();
   const [, navigate] = useLocation();
   const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const me = trpc.auth.me.useQuery();
@@ -20,17 +22,17 @@ export default function Report() {
   if (dashboard.error || !dashboard.data) return <PortalError />;
 
   const cards = dashboard.data.cards;
-  const today = new Date().toLocaleDateString("ar", {
+  const today = new Date().toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
   const statusText = (s: string) =>
-    s === "follow_up" ? "يحتاج متابعة" : s === "reassuring" ? "مطمئن" : "—";
+    s === "follow_up" ? t.status.follow_up : s === "reassuring" ? t.status.reassuring : "—";
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0" dir="rtl">
+    <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0" dir={dir}>
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -47,15 +49,15 @@ export default function Report() {
           onClick={() => navigate("/labs")}
           className="flex items-center gap-2 text-sm font-bold text-teal-800 hover:underline"
         >
-          <ArrowRight className="h-4 w-4" />
-          رجوع
+          <ArrowRight className="h-4 w-4 rtl:rotate-180" />
+          {t.report.back}
         </button>
         <button
           onClick={() => window.print()}
           className="flex items-center gap-2 rounded-xl bg-teal-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900"
         >
           <Printer className="h-4 w-4" />
-          طباعة / حفظ PDF
+          {t.report.printSavePdf}
         </button>
       </div>
 
@@ -63,28 +65,28 @@ export default function Report() {
         <header className="mb-6 border-b-2 border-teal-800 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-extrabold text-teal-900">ملخص التحاليل</h1>
+              <h1 className="text-2xl font-extrabold text-teal-900">{t.report.labSummaryTitle}</h1>
               <p className="mt-1 text-sm text-slate-600">
                 {me.data?.patientName ?? "—"}
-                {me.data?.birthYear ? ` · مواليد ${me.data.birthYear}` : ""}
+                {me.data?.birthYear ? ` · ${t.report.bornSuffix(me.data.birthYear)}` : ""}
               </p>
             </div>
-            <div className="text-left text-xs text-slate-500">
-              <p className="font-bold text-teal-800">رفيق الصحة</p>
-              <p className="mt-1">تاريخ الإصدار: {today}</p>
-              <p>عدد المؤشرات: {cards.length}</p>
+            <div className="text-end text-xs text-slate-500">
+              <p className="font-bold text-teal-800">{t.app.name}</p>
+              <p className="mt-1">{t.report.issueDateLabel} {today}</p>
+              <p>{t.report.indicatorCountLabel} {cards.length}</p>
             </div>
           </div>
         </header>
 
-        <table className="w-full text-right text-[11px]">
+        <table className="w-full text-start text-[11px]">
           <thead>
             <tr className="bg-teal-800 text-white">
-              <th className="px-2 py-2 font-bold">التحليل</th>
-              <th className="px-2 py-2 font-bold">المدى المرجعي</th>
-              <th className="px-2 py-2 font-bold">الحالة</th>
+              <th className="px-2 py-2 font-bold">{t.report.tableTest}</th>
+              <th className="px-2 py-2 font-bold">{t.report.tableReferenceRange}</th>
+              <th className="px-2 py-2 font-bold">{t.report.tableStatus}</th>
               <th className="px-2 py-2 text-center font-bold" colSpan={5}>
-                آخر ٥ قياسات (من الأقدم إلى الأحدث)
+                {t.report.last5Measurements}
               </th>
             </tr>
           </thead>
@@ -131,8 +133,7 @@ export default function Report() {
 
         <footer className="mt-6 border-t border-slate-200 pt-3 text-[9px] leading-4 text-slate-500">
           <p>
-            هذا الملخص سجل متابعة منظم للمعلومات الطبية، وليس تشخيصاً ولا بديلاً عن الرعاية
-            الطبية. يُرجع دائماً إلى التقارير الأصلية والطبيب المعالج.
+            {t.report.footerDisclaimer}
           </p>
         </footer>
       </div>

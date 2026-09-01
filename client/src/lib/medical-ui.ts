@@ -1,25 +1,12 @@
-import type { RadiologyModality, RecordPortal } from "@shared/medical";
+import type { Locale } from "@/i18n";
 
-const dateFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { year: "numeric", month: "long", day: "numeric" });
+const dateFormatters: Record<Locale, Intl.DateTimeFormat> = {
+  ar: new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { year: "numeric", month: "long", day: "numeric" }),
+  en: new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long", day: "numeric" }),
+};
 
-export function formatMedicalDate(date: string) {
+/** Renders a stored "YYYY-MM-DD" exam date in the given UI locale — this only affects display, never the stored value. */
+export function formatMedicalDate(date: string, locale: Locale = "ar") {
   const parsed = new Date(`${date}T12:00:00Z`);
-  return Number.isNaN(parsed.getTime()) ? date : dateFormatter.format(parsed);
+  return Number.isNaN(parsed.getTime()) ? date : dateFormatters[locale].format(parsed);
 }
-
-export const portalLabels: Record<RecordPortal, string> = {
-  laboratory: "التحاليل",
-  radiology: "الأشعة",
-  physician: "تقارير الأطباء",
-  pathology: "الخزعات وعلم الأمراض",
-};
-
-export const modalityLabels: Record<RadiologyModality, string> = {
-  CT: "أشعة مقطعية CT",
-  MRI: "رنين مغناطيسي MRI",
-  "X-ray": "أشعة سينية X-ray",
-  Ultrasound: "موجات فوق صوتية",
-  Fluoroscopy: "تصوير تألقي",
-  "Image-guided": "إجراء موجّه بالتصوير",
-  Other: "أشعة أخرى",
-};

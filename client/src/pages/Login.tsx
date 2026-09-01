@@ -1,9 +1,12 @@
 import { HeartPulse, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useLocale } from "@/contexts/LocaleContext";
+import { LocaleThemeSwitcher } from "@/components/LocaleThemeSwitcher";
 
 export default function Login() {
   const [, navigate] = useLocation();
+  const { t, dir } = useLocale();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,7 +32,7 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "حدث خطأ، حاول مرة أخرى");
+        setError(data.error ?? t.login.genericError);
         return;
       }
       if (data.pending) {
@@ -41,7 +44,7 @@ export default function Login() {
       navigate("/");
       window.location.reload();
     } catch {
-      setError("تعذّر الاتصال بالخادم");
+      setError(t.login.connectionError);
     } finally {
       setLoading(false);
     }
@@ -49,17 +52,18 @@ export default function Login() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-[#f7f9f7] px-4"
-      dir="rtl"
+      className="relative flex min-h-screen items-center justify-center bg-[#f7f9f7] px-4"
+      dir={dir}
     >
+      <div className="absolute top-4 end-4"><LocaleThemeSwitcher /></div>
       <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-800 text-white">
             <HeartPulse className="h-6 w-6" />
           </span>
-          <h1 className="text-xl font-extrabold text-teal-950">رفيق الصحة</h1>
+          <h1 className="text-xl font-extrabold text-teal-950">{t.app.name}</h1>
           <p className="text-sm text-slate-500">
-            {mode === "login" ? "سجّل دخولك لمتابعة سجلك الطبي" : "أنشئ حسابك الجديد"}
+            {mode === "login" ? t.login.loginSubtitle : t.login.signupSubtitle}
           </p>
         </div>
 
@@ -67,7 +71,7 @@ export default function Login() {
           {mode === "signup" && (
             <>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-bold text-slate-700">اسم المريض</label>
+                <label className="text-sm font-bold text-slate-700">{t.login.patientName}</label>
                 <input
                   type="text"
                   required
@@ -75,11 +79,11 @@ export default function Login() {
                   value={patientName}
                   onChange={e => setPatientName(e.target.value)}
                   className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-teal-700 focus:ring-2 focus:ring-teal-700/20"
-                  placeholder="الاسم الكامل"
+                  placeholder={t.login.fullNamePlaceholder}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-bold text-slate-700">سنة الميلاد</label>
+                <label className="text-sm font-bold text-slate-700">{t.login.birthYear}</label>
                 <input
                   type="number"
                   required
@@ -96,7 +100,7 @@ export default function Login() {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-slate-700">البريد الإلكتروني</label>
+            <label className="text-sm font-bold text-slate-700">{t.login.email}</label>
             <input
               type="email"
               required
@@ -108,7 +112,7 @@ export default function Login() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-slate-700">كلمة المرور</label>
+            <label className="text-sm font-bold text-slate-700">{t.login.password}</label>
             <input
               type="password"
               required
@@ -139,7 +143,7 @@ export default function Login() {
             className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900 disabled:opacity-60"
           >
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}
+            {mode === "login" ? t.login.signIn : t.login.createAccount}
           </button>
         </form>
 
@@ -152,7 +156,7 @@ export default function Login() {
           }}
           className="mt-5 w-full text-center text-sm font-bold text-teal-800 hover:underline"
         >
-          {mode === "login" ? "ليس لديك حساب؟ أنشئ واحداً" : "لديك حساب بالفعل؟ سجّل دخولك"}
+          {mode === "login" ? t.login.noAccount : t.login.haveAccount}
         </button>
       </div>
     </div>

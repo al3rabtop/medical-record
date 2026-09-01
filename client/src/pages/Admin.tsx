@@ -3,6 +3,7 @@ import { PortalError, PortalLoading } from "@/components/PortalState";
 import { trpc } from "@/lib/trpc";
 import { Activity, Clock, FileText, Users } from "lucide-react";
 import { AdminUserRow, type AdminUser } from "@/components/AdminUserRow";
+import { useLocale } from "@/contexts/LocaleContext";
 
 function fmt(d: string | Date | null) {
   if (!d) return "—";
@@ -14,6 +15,7 @@ function fmt(d: string | Date | null) {
 }
 
 export default function Admin() {
+  const { t } = useLocale();
   const overview = trpc.admin.overview.useQuery();
   const me = trpc.auth.me.useQuery();
 
@@ -25,37 +27,37 @@ export default function Admin() {
   return (
     <PortalShell>
       <div className="container py-8">
-        <h1 className="mb-1 text-2xl font-extrabold text-teal-950">لوحة الإحصائيات</h1>
+        <h1 className="mb-1 text-2xl font-extrabold text-teal-950">{t.admin.pageTitle}</h1>
         <p className="mb-6 text-sm text-slate-500">
-          نظرة عامة على الحسابات والنشاط. لا تتضمّن هذه اللوحة أي نتائج طبية — السجل الطبي لكل حساب يبقى خاصاً بصاحبه.
+          {t.admin.pageDescription}
         </p>
 
         {totals.pending > 0 && (
           <div className="mb-5 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
             <Clock className="h-4 w-4 shrink-0" />
-            {totals.pending} حساب بانتظار التفعيل — تجده في أعلى القائمة.
+            {t.admin.pendingAccountsNotice(totals.pending)}
           </div>
         )}
 
         <div className="mb-8 grid gap-3 sm:grid-cols-4">
-          <StatBox Icon={Users} label="عدد الحسابات" value={totals.users} />
-          <StatBox Icon={Clock} label="قيد المراجعة" value={totals.pending} />
-          <StatBox Icon={FileText} label="إجمالي التقارير" value={totals.visits} />
-          <StatBox Icon={Activity} label="إجمالي النتائج" value={totals.results} />
+          <StatBox Icon={Users} label={t.admin.accountsCount} value={totals.users} />
+          <StatBox Icon={Clock} label={t.admin.pendingReview} value={totals.pending} />
+          <StatBox Icon={FileText} label={t.admin.totalReports} value={totals.visits} />
+          <StatBox Icon={Activity} label={t.admin.totalResults} value={totals.results} />
         </div>
 
-        <h2 className="mb-3 text-lg font-extrabold text-slate-900">الحسابات</h2>
+        <h2 className="mb-3 text-lg font-extrabold text-slate-900">{t.admin.accountsTitle}</h2>
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
               <tr>
-                <th className="p-3 text-right font-bold">اسم المريض</th>
-                <th className="p-3 text-right font-bold">البريد</th>
-                <th className="p-3 text-right font-bold">سنة الميلاد</th>
-                <th className="p-3 text-right font-bold">التقارير</th>
-                <th className="p-3 text-right font-bold">آخر دخول</th>
-                <th className="p-3 text-right font-bold">الحالة</th>
-                <th className="p-3 text-right font-bold">الإجراءات</th>
+                <th className="p-3 text-start font-bold">{t.admin.tablePatientName}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableEmail}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableBirthYear}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableReports}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableLastSignIn}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableStatus}</th>
+                <th className="p-3 text-start font-bold">{t.admin.tableActions}</th>
               </tr>
             </thead>
             <tbody>

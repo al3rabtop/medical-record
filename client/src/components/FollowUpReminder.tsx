@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 /**
  * Lets the user record a follow-up date their doctor gave them for this
@@ -14,6 +15,7 @@ export function FollowUpReminder({
   resultId: number;
   followUpDate: string | null;
 }) {
+  const { t } = useLocale();
   const utils = trpc.useUtils();
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState(followUpDate ?? "");
@@ -37,21 +39,21 @@ export function FollowUpReminder({
       >
         <span className="flex items-center gap-2 font-bold">
           <Bell className="h-4 w-4" />
-          {overdue ? "موعد إعادة الفحص فات" : "موعد إعادة الفحص"}: <span dir="ltr">{followUpDate}</span>
+          {overdue ? t.followUp.overdueLabel : t.followUp.dueLabel}: <span dir="ltr">{followUpDate}</span>
         </span>
         <div className="flex gap-1">
           <button
             onClick={() => setEditing(true)}
             className="rounded-lg px-2 py-1 text-xs font-bold underline decoration-dotted"
           >
-            تعديل
+            {t.common.edit}
           </button>
           <button
             onClick={() => setReminder.mutate({ resultId, followUpDate: null })}
             disabled={setReminder.isPending}
             className="rounded-lg px-2 py-1 text-xs font-bold underline decoration-dotted"
           >
-            إلغاء
+            {t.common.cancel}
           </button>
         </div>
       </div>
@@ -65,7 +67,7 @@ export function FollowUpReminder({
         className="flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3.5 py-2.5 text-sm font-bold text-slate-500 transition hover:border-teal-300 hover:text-teal-800"
       >
         <BellOff className="h-4 w-4" />
-        إضافة تذكير بإعادة الفحص
+        {t.followUp.addReminder}
       </button>
     );
   }
@@ -84,16 +86,16 @@ export function FollowUpReminder({
         className="flex items-center gap-1.5 rounded-lg bg-teal-800 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
       >
         {setReminder.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-        حفظ
+        {t.followUp.save}
       </button>
       <button
         onClick={() => setEditing(false)}
         className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600"
       >
-        إلغاء
+        {t.common.cancel}
       </button>
       <p className="w-full text-[11px] text-slate-500">
-        سجّل التاريخ اللي حدّده طبيبك لإعادة هذا الفحص — التطبيق ما يقترح موعداً بنفسه.
+        {t.followUp.note}
       </p>
     </div>
   );

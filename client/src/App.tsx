@@ -8,6 +8,7 @@ import Profiles from "./pages/Profiles";
 import Report from "./pages/Report";
 import { RequireAuth } from "./components/RequireAuth";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { LocaleProvider } from "./contexts/LocaleContext";
 import Home from "./pages/Home";
 import Laboratory from "./pages/Laboratory";
 import Login from "./pages/Login";
@@ -63,25 +64,19 @@ function Router() {
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <ProfileProvider>
-            <Router />
-          </ProfileProvider>
-        </TooltipProvider>
-      </ThemeProvider>
+      <LocaleProvider>
+        <ThemeProvider defaultTheme="light" switchable>
+          <TooltipProvider>
+            <Toaster />
+            <ProfileProvider>
+              <Router />
+            </ProfileProvider>
+          </TooltipProvider>
+        </ThemeProvider>
+      </LocaleProvider>
     </ErrorBoundary>
   );
 }

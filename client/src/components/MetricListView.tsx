@@ -2,6 +2,7 @@ import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { type MedicalStatus } from "@shared/medical";
 import { getTestInfo } from "@shared/testInfo";
 import { ChevronLeft } from "lucide-react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type Row = {
   code: string;
@@ -23,17 +24,18 @@ export function MetricListView({
   cards: Row[];
   onOpen: (code: string) => void;
 }) {
+  const { t } = useLocale();
   return (
     <div className="overflow-hidden rounded-[1.45rem] border border-slate-200 bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full text-right text-sm">
+        <table className="w-full text-start text-sm">
           <thead className="bg-slate-50 text-xs text-slate-500">
             <tr>
-              <th className="px-4 py-3 font-bold">التحليل</th>
-              <th className="px-4 py-3 font-bold">النتيجة</th>
-              <th className="px-4 py-3 font-bold">المدى المرجعي</th>
-              <th className="px-4 py-3 font-bold">آخر قياس</th>
-              <th className="px-4 py-3 font-bold">الحالة</th>
+              <th className="px-4 py-3 font-bold">{t.table.test}</th>
+              <th className="px-4 py-3 font-bold">{t.table.result}</th>
+              <th className="px-4 py-3 font-bold">{t.table.referenceRange}</th>
+              <th className="px-4 py-3 font-bold">{t.table.lastMeasured}</th>
+              <th className="px-4 py-3 font-bold">{t.table.status}</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>

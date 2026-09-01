@@ -1,4 +1,5 @@
 import { type MedicalStatus } from "@shared/medical";
+import { useLocale } from "@/contexts/LocaleContext";
 import {
   Area,
   AreaChart,
@@ -47,6 +48,7 @@ export function MetricTrendChart({
   compact?: boolean;
   tiny?: boolean;
 }) {
+  const { t } = useLocale();
   const rawPoints = history
     .map(h => ({
       examDate: h.examDate,
@@ -134,7 +136,7 @@ export function MetricTrendChart({
             labelStyle={{ fontWeight: 700, color: "#0f172a" }}
             formatter={(value: number, _n, item: any) => [
               `${value}${item?.payload?.unit ? " " + item.payload.unit : ""}`,
-              "النتيجة",
+              t.table.result,
             ]}
           />
 

@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import { useState } from "react";
+import { useLocale } from "@/contexts/LocaleContext";
 
 type Draft = {
   id: number;
@@ -12,6 +13,7 @@ type Draft = {
 
 /** Inline editor for the results inside one visit. */
 export function VisitResultsEditor({ visitId }: { visitId: number }) {
+  const { t } = useLocale();
   const utils = trpc.useUtils();
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, Draft>>({});
@@ -71,14 +73,14 @@ export function VisitResultsEditor({ visitId }: { visitId: number }) {
         className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800"
       >
         <Pencil className="h-4 w-4" />
-        تعديل النتائج
+        {t.visitEditor.editResults}
       </button>
     );
   }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="mb-3 text-sm font-extrabold text-slate-900">تعديل النتائج</p>
+      <p className="mb-3 text-sm font-extrabold text-slate-900">{t.visitEditor.editResults}</p>
 
       {err && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{err}</p>
@@ -92,13 +94,13 @@ export function VisitResultsEditor({ visitId }: { visitId: number }) {
 
       {results.data && (
         <div className="overflow-x-auto">
-          <table className="w-full text-right text-sm">
+          <table className="w-full text-start text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500">
               <tr>
-                <th className="px-3 py-2 font-bold">الفحص</th>
-                <th className="px-3 py-2 font-bold">النتيجة</th>
-                <th className="px-3 py-2 font-bold">الوحدة</th>
-                <th className="px-3 py-2 font-bold">المدى المرجعي</th>
+                <th className="px-3 py-2 font-bold">{t.table.test}</th>
+                <th className="px-3 py-2 font-bold">{t.table.result}</th>
+                <th className="px-3 py-2 font-bold">{t.visitEditor.unit}</th>
+                <th className="px-3 py-2 font-bold">{t.table.referenceRange}</th>
               </tr>
             </thead>
             <tbody>
@@ -134,15 +136,15 @@ export function VisitResultsEditor({ visitId }: { visitId: number }) {
         <button onClick={saveAll} disabled={update.isPending || Object.keys(drafts).length === 0}
           className="flex items-center gap-2 rounded-lg bg-teal-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-teal-900 disabled:opacity-50">
           {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          حفظ التعديلات
+          {t.visitEditor.saveChanges}
         </button>
         <button onClick={stop}
           className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600">
           <X className="h-4 w-4" />
-          إلغاء
+          {t.common.cancel}
         </button>
         <p className="text-[11px] text-slate-500">
-          تُحدَّث حالة كل نتيجة تلقائياً بعد الحفظ حسب المدى المرجعي.
+          {t.visitEditor.autoStatusNote}
         </p>
       </div>
     </div>

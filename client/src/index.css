@@ -53,17 +53,60 @@
   --ring: oklch(0.52 0.09 171);
 }
 
+/* Dark mode overrides the shadcn token set below, plus Tailwind slate color variables (the app hand-written screens use bg-slate/text-slate/border-slate directly as their neutral scale), so every screen re-themes without touching component code. Slate shades are swapped by role (50 with 950, 100 with 900, and so on) using Tailwind own real color values, not an inverted filter. Brand and status colors are left as-is since they already read fine on a dark page. */
+.dark {
+  --background: oklch(0.16 0.02 165);
+  --foreground: oklch(0.94 0.01 160);
+  --card: oklch(0.2 0.022 163);
+  --card-foreground: oklch(0.94 0.01 160);
+  --popover: oklch(0.2 0.022 163);
+  --popover-foreground: oklch(0.94 0.01 160);
+  --primary: oklch(0.75 0.1 172);
+  --primary-foreground: oklch(0.16 0.03 170);
+  --secondary: oklch(0.27 0.025 165);
+  --secondary-foreground: oklch(0.92 0.02 165);
+  --muted: oklch(0.24 0.018 163);
+  --muted-foreground: oklch(0.68 0.02 165);
+  --accent: oklch(0.3 0.035 168);
+  --accent-foreground: oklch(0.92 0.02 168);
+  --destructive: oklch(0.62 0.19 25);
+  --destructive-foreground: oklch(0.97 0.01 20);
+  --border: oklch(0.3 0.02 163);
+  --input: oklch(0.3 0.02 163);
+  --ring: oklch(0.6 0.09 171);
+
+  --color-slate-50: oklch(12.9% 0.042 264.695);
+  --color-slate-100: oklch(20.8% 0.042 265.755);
+  --color-slate-200: oklch(27.9% 0.041 260.031);
+  --color-slate-300: oklch(37.2% 0.044 257.287);
+  --color-slate-400: oklch(44.6% 0.043 257.281);
+  --color-slate-500: oklch(60% 0.046 257.417);
+  --color-slate-600: oklch(70.4% 0.04 256.788);
+  --color-slate-700: oklch(86.9% 0.022 252.894);
+  --color-slate-800: oklch(92.9% 0.013 255.508);
+  --color-slate-900: oklch(96.8% 0.007 247.896);
+  --color-slate-950: oklch(98.4% 0.003 247.858);
+}
+
 @layer base {
   * { @apply border-border outline-ring/50; }
-  html { direction: rtl; scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; }
+  /* Direction comes from the <html dir> attribute (set by LocaleProvider), not a hardcoded value, so English can render LTR. */
   body { @apply bg-background text-foreground; font-family: "IBM Plex Sans Arabic", sans-serif; }
+  html[dir="ltr"] body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   button:not(:disabled), a[href] { @apply cursor-pointer; }
+}
+
+/* The app cards use a literal bg-white utility as their surface color. The white color variable cannot be remapped the way the slate ones were above, since it is also used for text and border colors on solid accent buttons that must stay white in both themes, so this targets the bg-white utility itself, scoped to dark mode, instead of the shared variable. */
+@layer utilities {
+  .dark .bg-white { background-color: var(--color-slate-100); }
 }
 
 @layer components {
   .container { width: 100%; margin-inline: auto; padding-inline: 1rem; }
   .section-kicker { color: #0f766e; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
-  .section-title { margin-top: 0.35rem; color: #0f172a; font-family: "Noto Naskh Arabic", serif; font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.1; }
+  .section-title { margin-top: 0.35rem; color: var(--color-slate-900, #0f172a); font-family: "Noto Naskh Arabic", serif; font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.1; }
+  html[dir="ltr"] .section-title { font-family: Georgia, "Times New Roman", serif; }
   .medical-hero::before { content: ""; position: absolute; inset: 0; opacity: 0.26; background-image: linear-gradient(120deg, transparent 0 48%, rgba(255,255,255,0.12) 48% 49%, transparent 49% 100%); background-size: 33px 33px; }
   .hero-orb { position: absolute; border-radius: 999px; filter: blur(1px); pointer-events: none; }
   .hero-orb-one { width: 18rem; height: 18rem; left: -6rem; top: -9rem; background: rgba(94, 234, 212, 0.16); }
