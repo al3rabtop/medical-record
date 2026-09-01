@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, TriangleAlert } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const BUTTON_CLASS =
+  "flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-wait disabled:opacity-70";
 
 const FILE_TYPE_LABELS: Record<string, string> = {
   "application/pdf": "PDF",
@@ -42,31 +45,50 @@ function formatDocumentDate(date: Date) {
  * picker instead of guessing which one the user wants.
  */
 export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
-  const docs = trpc.medical.visitDocuments.useQuery(
-    { visitIds },
-    { enabled: visitIds.length > 0 }
+  // Callers (e.g. the test-detail card) rebuild this array on every render,
+  // so it's normalized and re-derived by value here rather than by
+  // reference — dedup + sort keeps the query input, and therefore its
+  // loading/error state, stable across renders.
+  const normalizedVisitIds = useMemo(
+    () => Array.from(new Set(visitIds)).sort((a, b) => a - b),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on actual ids, not array identity
+    [visitIds.join(",")]
   );
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  const docs = trpc.medical.visitDocuments.useQuery(
+    { visitIds: normalizedVisitIds },
+    { enabled: normalizedVisitIds.length > 0 }
+  );
+
+  // Nothing to look up — not a loading or error state, just no context yet.
+  if (normalizedVisitIds.length === 0) return null;
+
+  // Confirmed (not loading, no error) that this record has no stored
+  // original report — legitimately nothing to show, not a stuck state.
+  if (docs.data && docs.data.length === 0) return null;
+
   if (docs.isLoading) {
     return (
-      <span className="inline-flex items-center gap-2 px-1 py-2 text-xs font-bold text-slate-400">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        جارٍ التحقق من الملف الأصلي…
-      </span>
+      <button type="button" disabled className={BUTTON_CLASS}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+        عرض التقرير الأصلي
+      </button>
     );
   }
 
-  if (!docs.data || docs.data.length === 0) return null;
+  if (docs.isError || !docs.data) {
+    return (
+      <button type="button" onClick={() => docs.refetch()} className={BUTTON_CLASS}>
+        <TriangleAlert className="h-4 w-4" />
+        تعذّر تحميل الملف الأصلي — إعادة المحاولة
+      </button>
+    );
+  }
 
   if (docs.data.length === 1) {
     return (
-      <a
-        href={`/api/documents/${docs.data[0].id}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800"
-      >
+      <a href={`/api/documents/${docs.data[0].id}`} target="_blank" rel="noopener noreferrer" className={BUTTON_CLASS}>
         <FileText className="h-4 w-4" />
         عرض التقرير الأصلي
       </a>
@@ -75,11 +97,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setPickerOpen(true)}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:border-teal-300 hover:text-teal-800"
-      >
+      <button type="button" onClick={() => setPickerOpen(true)} className={BUTTON_CLASS}>
         <FileText className="h-4 w-4" />
         عرض التقرير الأصلي ({docs.data.length} ملفات)
       </button>
