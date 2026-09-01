@@ -27,11 +27,30 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   mch: ["متوسط هيموغلوبين الكرية", "متوسط محتوى الهيموجلوبين", "متوسط الهيموجلوبين في الكرية", "متوسط وزن الهيموجلوبين", "متوسط كتلة الهيموجلوبين", "متوسط محتوى الهيموجلوبين في الكرية", "mch", "meancorpuscularhemoglobin"],
   mchc: ["تركيز هيموغلوبين الكرية", "تركيز الهيموجلوبين الخلوي المتوسط", "متوسط تركيز الهيموجلوبين", "تركيز الهيموجلوبين في الكرية", "تركيز الهيموجلوبين المتوسط في الكرية", "mchc"],
   rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "توزيع عرض خلايا الدم", "rdw"],
-  neutrophils: ["العدلات", "النيتروفيل", "الخلايا المتعادلة", "المتعادلات", "الخلايا المتعددة النوى", "neutrophils", "neut"],
-  lymphocytes: ["الخلايا اللمفاوية", "اللمفاويات", "الليمفوسيت", "الليمفوسيتات", "الليمفوسيت النسبة", "الليمفوسيت العدد", "الليمفوسيتات العدد المطلق", "لمفاويات", "lymphocytes", "lym"],
-  monocytes: ["الوحيدات", "الأحادية", "الخلايا الأحادية", "الخلايا الأحادية العدد المطلق", "الخلايا أحادية النوى", "monocytes", "mono"],
+  // Differential counts come in TWO distinct measurements per cell type: a
+  // percentage of white cells, and an absolute count per litre. They are
+  // clinically different numbers (e.g. 55% vs 3.2 x10^9/L) and must never
+  // share a code — plotting them on one trend line would be meaningless.
+  // Bare labels with no qualifier keep the base code.
+  neutrophils: ["العدلات", "النيتروفيل", "الخلايا المتعادلة", "المتعادلات", "الخلايا المتعددة النوى", "الخلايا المحببة", "neutrophils", "neut"],
+  neutrophils_percent: ["النيتروفيل النسبة", "العدلات النسبة المئوية", "العدلات النسبة", "نسبة العدلات", "neut%", "neutrophilspercent"],
+  neutrophils_absolute: ["النيتروفيل العدد", "العدلات العدد المطلق", "العدلات العدد", "العدد المطلق للعدلات", "absoluteneutrophilcount", "anc"],
+
+  lymphocytes: ["الخلايا اللمفاوية", "اللمفاويات", "الليمفوسيت", "الليمفوسيتات", "لمفاويات", "lymphocytes", "lym"],
+  lymphocytes_percent: ["الليمفوسيت النسبة", "الليمفوسيتات النسبة المئوية", "الليمفوسيتات النسبة", "نسبة اللمفاويات", "lym%", "lymphocytespercent"],
+  lymphocytes_absolute: ["الليمفوسيت العدد", "الليمفوسيتات العدد المطلق", "الليمفوسيتات العدد", "absolutelymphocytecount", "alc"],
+
+  monocytes: ["الوحيدات", "الأحادية", "الخلايا الأحادية", "الخلايا أحادية النوى", "monocytes", "mono"],
+  monocytes_percent: ["الأحادية النسبة", "الخلايا الأحادية النسبة المئوية", "نسبة الوحيدات", "mono%", "monocytespercent"],
+  monocytes_absolute: ["الأحادية العدد", "الخلايا الأحادية العدد المطلق", "عدد الخلايا الأحادية المطلق", "absolutemonocytecount"],
+
   eosinophils: ["الحمضات", "الخلايا الحمضية", "eosinophils", "eos"],
-  basophils: ["الأسسات", "الخلايا القاعدية", "القاعديات", "basophils", "baso"],
+  eosinophils_percent: ["الحمضات النسبة", "الحمضات النسبة المئوية", "نسبة الحمضات", "eos%", "eosinophilspercent"],
+  eosinophils_absolute: ["الحمضات العدد", "الحمضات العدد المطلق", "عدد الخلايا الحمضية المطلق", "absoluteeosinophilcount"],
+
+  basophils: ["الأسسات", "الخلايا القاعدية", "القاعديات", "الحمضيات القاعدية", "basophils", "baso"],
+  basophils_percent: ["القاعديات النسبة", "الخلايا القاعدية النسبة المئوية", "نسبة القاعديات", "baso%", "basophilspercent"],
+  basophils_absolute: ["القاعديات العدد", "الخلايا القاعدية العدد المطلق", "عدد الخلايا القاعدية المطلق", "absolutebasophilcount"],
 
   ferritin: ["الفيريتين", "فيريتين", "ferritin"],
   iron: ["الحديد", "حديد المصل", "serumiron", "iron", "fe"],
@@ -113,43 +132,61 @@ export type TestCodeResolution = {
   code: string;
   /** True when this matched a known alias; false when it's a generated fallback slug. */
   matched: boolean;
+  /**
+   * Set when the label and the abbreviation each resolve to a *different*
+   * known test. Extraction can swap short abbreviations (ALT vs AST is the
+   * classic case), so the fuller label wins — but the caller is told, because
+   * a contradiction here means the stored `abbr` is probably wrong too.
+   */
+  conflict?: { fromLabel: string; fromAbbr: string };
 };
 
 /**
- * Resolves a test to its canonical code. Tries, in order: the English
- * abbreviation field, embedded Latin tokens inside the label (many lab
- * exports write "الاسم العربي ENGLISH_ABBR" as one string), an exact label
- * match, then substring containment. Falls back to a slug of the label so
- * unrecognised tests still get a stable code — but callers that care about
- * not overwriting a perfectly good existing code should check `matched`.
+ * Resolves a test to its canonical code. The label is treated as the more
+ * reliable signal than the abbreviation: it is longer and more redundant,
+ * whereas a three-letter abbreviation is exactly the kind of token an
+ * OCR/extraction step silently swaps. The abbreviation is only used when
+ * the label alone doesn't resolve.
  */
 export function resolveTestCodeDetailed(label: string, abbr?: string | null): TestCodeResolution {
-  if (abbr) {
-    const core = abbr.replace(/\([^)]*\)/g, " ").trim();
-    const paren = abbr.match(/\(([^)]+)\)/)?.[1] ?? "";
-    for (const candidate of [core, paren, abbr]) {
-      const hit = ALIAS_TO_CODE.get(norm(candidate));
-      if (hit) return { code: hit, matched: true };
-    }
+  const fromLabel = resolveFromLabel(label);
+  const fromAbbr = abbr ? resolveFromAbbr(abbr) : null;
+
+  if (fromLabel && fromAbbr && fromLabel !== fromAbbr) {
+    // Trust the label, but surface the disagreement.
+    return { code: fromLabel, matched: true, conflict: { fromLabel, fromAbbr } };
   }
 
+  if (fromLabel) return { code: fromLabel, matched: true };
+  if (fromAbbr) return { code: fromAbbr, matched: true };
+
+  return { code: fallbackSlug(label), matched: false };
+}
+
+/** Resolves using only the abbreviation field. */
+function resolveFromAbbr(abbr: string): string | null {
+  const core = abbr.replace(/\([^)]*\)/g, " ").trim();
+  const paren = abbr.match(/\(([^)]+)\)/)?.[1] ?? "";
+  for (const candidate of [core, paren, abbr]) {
+    const hit = ALIAS_TO_CODE.get(norm(candidate));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** Resolves using only the label, returning null when nothing is recognised. */
+function resolveFromLabel(label: string): string | null {
   const normLabel = norm(label);
 
   const exact = ALIAS_TO_CODE.get(normLabel);
-  if (exact) return { code: exact, matched: true };
+  if (exact) return exact;
 
   // Embedded English abbreviation, e.g. "النسبة المعيارية الدولية INR" -> INR.
   for (const token of latinTokens(label)) {
     const hit = ALIAS_TO_CODE.get(norm(token));
-    if (hit) return { code: hit, matched: true };
+    if (hit) return hit;
   }
 
-  // Substring containment both ways, longest alias first, with a floor so
-  // short aliases (like "k" for potassium) can't false-match unrelated text.
-  // Ratio-style tests (e.g. "نسبة الألبومين للجلوبيولين") are protected from
-  // false substring merges by their own exact aliases above, matched before
-  // this loop ever runs — so a plain differential-percentage label like
-  // "النيتروفيل النسبة" is still free to merge with its base test.
   // Substring containment: does the label CONTAIN a known alias?
   // A general specimen guard runs first: if the label marks itself as a
   // urine specimen (e.g. "خلايا الدم الحمراء في البول"), it must never
@@ -171,20 +208,16 @@ export function resolveTestCodeDetailed(label: string, abbr?: string | null): Te
       if (aliasNorm.length < 4) continue;
       if (normLabel.includes(aliasNorm)) distinctHits.add(code);
     }
-    if (distinctHits.size > 1) {
-      return { code: fallbackSlug(label), matched: false };
-    }
+    if (distinctHits.size > 1) return null;
   }
 
   for (const [aliasNorm, code] of ALIASES_BY_LENGTH) {
     if (aliasNorm.length < 4) continue;
     if (isUrineSpecimen && !code.startsWith("urine_")) continue;
-    if (normLabel.includes(aliasNorm)) {
-      return { code, matched: true };
-    }
+    if (normLabel.includes(aliasNorm)) return code;
   }
 
-  return { code: fallbackSlug(label), matched: false };
+  return null;
 }
 
 function fallbackSlug(label: string): string {

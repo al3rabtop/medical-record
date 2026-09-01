@@ -50,9 +50,22 @@ export function registerCanonicalizeRoute(app: Express) {
 
     const changes: Array<{ id: number; visitId: number; label: string; from: string; to: string }> = [];
     const unmatched: Array<{ id: number; label: string; currentCode: string }> = [];
+    // Rows whose stored `abbr` contradicts their label — the abbr is very
+    // likely a bad extraction and should be reviewed/corrected at the source.
+    const abbrConflicts: Array<{ id: number; visitId: number; label: string; abbr: string | null; usedCode: string; abbrSuggested: string }> = [];
 
     for (const row of rows) {
-      const { code: canonical, matched } = resolveTestCodeDetailed(row.label, row.abbr);
+      const { code: canonical, matched, conflict } = resolveTestCodeDetailed(row.label, row.abbr);
+      if (conflict) {
+        abbrConflicts.push({
+          id: row.id,
+          visitId: row.visitId,
+          label: row.label,
+          abbr: row.abbr,
+          usedCode: conflict.fromLabel,
+          abbrSuggested: conflict.fromAbbr,
+        });
+      }
       if (!matched) {
         unmatched.push({ id: row.id, label: row.label, currentCode: row.code });
         continue;
@@ -110,6 +123,8 @@ export function registerCanonicalizeRoute(app: Express) {
       willApplyCount: applied.length,
       skippedCount: skipped.length,
       unmatchedCount: unmatched.length,
+      abbrConflictCount: abbrConflicts.length,
+      abbrConflicts: abbrConflicts.slice(0, 50),
       changes: applied.slice(0, 200),
       skipped: skipped.slice(0, 50),
     });
