@@ -9,12 +9,41 @@
  * silently corrupt the trend chart with a fake jump. See creatinine_umol_l.
  */
 
-const norm = (s: string) =>
-  s
+/**
+ * Arabic labels vary in spelling between labs in ways that are purely
+ * orthographic: hamza forms, ta-marbuta, and transliteration choices like
+ * هيموجلوبين vs هيموغلوبين or كولسترول vs كوليسترول. Collapsing those here
+ * means one alias entry covers every spelling, instead of the table needing
+ * a line per variant (and silently mis-resolving the ones nobody listed).
+ */
+const VARIANT_REPLACEMENTS: Array<[RegExp, string]> = [
+  // Transliteration variants (applied before punctuation is stripped).
+  [/هيموجلوبين|هيموقلوبين/g, "هيموغلوبين"],
+  [/جلوبيولين|جلوبولين|غلوبيولين/g, "غلوبولين"],
+  [/كولسترول/g, "كوليسترول"],
+  [/الببومين|البيومين/g, "البومين"],
+  [/فيرتين|فيرين/g, "فيريتين"],
+];
+
+const norm = (s: string) => {
+  let out = s
     .trim()
     .toLowerCase()
     .replace(/[\u064B-\u065F]/g, "") // strip Arabic diacritics
-    .replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, ""); // strip spaces/punctuation for loose matching
+    .replace(/\u0640/g, "") // strip tatweel
+    // Standard Arabic orthographic normalisation.
+    .replace(/[\u0623\u0625\u0622\u0671]/g, "\u0627") // أإآٱ -> ا
+    .replace(/\u0629/g, "\u0647") // ة -> ه
+    .replace(/\u0649/g, "\u064A") // ى -> ي
+    .replace(/\u0624/g, "\u0648") // ؤ -> و
+    .replace(/\u0626/g, "\u064A"); // ئ -> ي
+
+  for (const [pattern, replacement] of VARIANT_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+
+  return out.replace(/[^0-9a-zA-Z\u0600-\u06FF]+/g, ""); // strip spaces/punctuation
+};
 
 /** Canonical code -> every known alias (Arabic labels, English names, abbreviations). */
 const ALIAS_GROUPS: Record<string, string[]> = {
@@ -23,10 +52,10 @@ const ALIAS_GROUPS: Record<string, string[]> = {
   rbc: ["كريات الدم الحمراء", "الكريات الحمراء", "خلايا الدم الحمراء", "عدد كريات الدم الحمراء", "rbc", "redbloodcells", "erythrocytes"],
   wbc: ["كريات الدم البيضاء", "الكريات البيضاء", "خلايا الدم البيضاء", "عدد خلايا الدم البيضاء", "wbc", "whitebloodcells", "leukocytes"],
   platelets: ["الصفائح الدموية", "صفائح", "platelets", "plt"],
-  mcv: ["متوسط حجم الكرية", "متوسط حجم الخلية", "متوسط حجم خلايا الدم الحمراء", "متوسط حجم كريات الدم", "mcv", "meancorpuscularvolume"],
+  mcv: ["متوسط حجم الكرية", "متوسط حجم الخلية", "متوسط حجم الكريات", "متوسط حجم خلايا الدم الحمراء", "متوسط حجم كريات الدم", "mcv", "meancorpuscularvolume"],
   mch: ["متوسط هيموغلوبين الكرية", "متوسط محتوى الهيموجلوبين", "متوسط الهيموجلوبين في الكرية", "متوسط وزن الهيموجلوبين", "متوسط كتلة الهيموجلوبين", "متوسط محتوى الهيموجلوبين في الكرية", "mch", "meancorpuscularhemoglobin"],
   mchc: ["تركيز هيموغلوبين الكرية", "تركيز الهيموجلوبين الخلوي المتوسط", "متوسط تركيز الهيموجلوبين", "تركيز الهيموجلوبين في الكرية", "تركيز الهيموجلوبين المتوسط في الكرية", "mchc"],
-  rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "توزيع عرض خلايا الدم", "rdw"],
+  rdw: ["تباين حجم الكريات", "توزيع حجم الكريات", "توزيع عرض الكرية الحمراء", "توزيع عرض خلايا الدم الحمراء", "توزيع عرض خلايا الدم", "توزيع عرض الخلايا", "rdw"],
   // Differential counts come in TWO distinct measurements per cell type: a
   // percentage of white cells, and an absolute count per litre. They are
   // clinically different numbers (e.g. 55% vs 3.2 x10^9/L) and must never
@@ -57,7 +86,7 @@ const ALIAS_GROUPS: Record<string, string[]> = {
 
   total_cholesterol: ["الكوليسترول الكلي", "كوليسترول كلي", "totalcholesterol", "cholesterol"],
   ldl: ["الكوليسترول الضار", "كوليسترول البروتين الدهني منخفض الكثافة", "ldl", "ldlcholesterol"],
-  hdl: ["الكوليسترول النافع", "كوليسترول البروتين الدهني عالي الكثافة", "hdl", "hdlcholesterol"],
+  hdl: ["الكوليسترول النافع", "الكوليسترول الجيد", "كوليسترول البروتين الدهني عالي الكثافة", "hdl", "hdlcholesterol"],
   cholesterol_hdl_ratio: ["نسبة الكوليسترول لـ hdl", "نسبة الكوليسترول الى hdl", "نسبة الكوليسترول إلى hdl", "نسبة الكوليسترول للـhdl", "cholesterolhdlratio", "tcholhdlratio"],
   triglycerides: ["الدهون الثلاثية", "triglycerides", "tg"],
 
