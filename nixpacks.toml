@@ -1,0 +1,9 @@
+# Adds Ghostscript to the Railway build image so server/pdfCompression.ts
+# can shell out to it for real PDF compression before upload. This is a
+# separate phase (rather than editing the auto-detected "setup" phase) so
+# it only adds one package and can't accidentally replace the Node/pnpm
+# toolchain Nixpacks already detects; it does not change how the app itself
+# is built or started.
+[phases.ghostscript]
+dependsOn = ["setup"]
+nixPkgs = ["ghostscript"]

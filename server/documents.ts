@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { medicalDocuments, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
 import { isStorageConfigured, uploadObject } from "./_core/storage";
+import { compressPdf, isDigitallySigned } from "./pdfCompression";
 
 /** Raw upload guard, before compression. Independent of the AI extraction limit — storing never touches the AI. */
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -31,23 +32,39 @@ export type StoredDocument = {
  * enough to store cheaply while keeping medical text, numbers, and reference
  * ranges legible.
  *
- * PDFs are preserved byte-for-byte. Real PDF compression (recompressing the
- * embedded page images) needs either a native binary (Ghostscript/qpdf —
- * not something this app's Nixpacks/Railway build can be guaranteed to have,
- * and adding one would be exactly the fragile dependency we want to avoid)
- * or rasterizing each page into an image, which trades away searchable text
- * and can easily end up *larger*, not smaller, for text-heavy reports. A
- * pure-JS structural repack (e.g. pdf-lib re-saving with object streams)
- * was evaluated too, but it only touches object/xref overhead, not the
- * embedded image streams that dominate a scanned report's size, so its
- * realistic yield here is marginal and not worth the added risk of failing
- * to parse an unusual PDF. So PDFs pass through unchanged for now.
+ * PDFs go through Ghostscript (see pdfCompression.ts), which recompresses
+ * the embedded page images without touching the text/vector content stream
+ * — a scanned report shrinks, a text report keeps its searchable text, and
+ * a signed PDF is left untouched since any recompression would invalidate
+ * its signature. If Ghostscript is unavailable, fails, times out, or
+ * produces a larger file than it started with, the original bytes are
+ * stored — compression is a best-effort optimization, never a condition
+ * for the upload to succeed.
  */
 async function prepareForStorage(
   buffer: Buffer,
   mimeType: string
 ): Promise<{ buffer: Buffer; mimeType: string; extension: string }> {
   if (mimeType === "application/pdf") {
+    // A signed PDF's byte range is cryptographically hashed — any
+    // recompression, however lossless, invalidates the signature.
+    if (isDigitallySigned(buffer)) {
+      return { buffer, mimeType, extension: "pdf" };
+    }
+
+    try {
+      const compressed = await compressPdf(buffer);
+      // Ghostscript can occasionally grow a file it re-encodes (e.g. a
+      // scanned PDF whose images were already using a more efficient
+      // encoding than the ebook profile's JPEG re-compression) — only
+      // keep the result when it's a genuine improvement.
+      if (compressed && compressed.length < buffer.length) {
+        return { buffer: compressed, mimeType, extension: "pdf" };
+      }
+    } catch (err) {
+      console.error("[documents] PDF compression failed, storing the original PDF:", err);
+    }
+
     return { buffer, mimeType, extension: "pdf" };
   }
 
