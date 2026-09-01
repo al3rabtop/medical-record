@@ -7,6 +7,7 @@ import { registerAdminImportRoute } from "./adminImport";
 import { registerAdminBootstrapRoute } from "./adminBootstrap";
 import { registerExtractRoute } from "./extract";
 import { registerCanonicalizeRoute } from "./canonicalize";
+import { registerFixAbbrRoute } from "./fixAbbr";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -22,6 +23,7 @@ async function startServer() {
   registerAdminBootstrapRoute(app);
   registerExtractRoute(app);
   registerCanonicalizeRoute(app);
+  registerFixAbbrRoute(app);
   // tRPC API
   app.use(
     "/api/trpc",
