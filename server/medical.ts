@@ -19,10 +19,18 @@ export type ResultCard = {
   status: MedicalStatus;
   trend: ReturnType<typeof deriveTrend>;
   interpretation: TrendInterpretation;
-  lastFive: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
-  history: Array<{ value: string; unit: string | null; examDate: string; status: MedicalStatus }>;
+  lastFive: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
+  history: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>;
   /** True when this test's history mixes more than one unit across labs — flagged, never silently trusted. */
   hasUnitMismatch: boolean;
+  /**
+   * True when the reference range changed across measurements. Ranges vary
+   * by lab and by assay kit, so two numbers judged against different ranges
+   * are not directly comparable even when the unit matches.
+   */
+  hasRangeMismatch: boolean;
+  /** Distinct labs seen in this test's history, when recorded. */
+  facilities: string[];
 };
 
 const priorityCodes = ["hemoglobin", "ferritin", "total_cholesterol", "ldl", "hba1c", "tsh", "urine_wbc"];
@@ -58,6 +66,7 @@ export async function getMedicalRecordsForUser(userId: number, profileId?: numbe
       followUpDate: medicalResults.followUpDate,
       status: medicalResults.status,
       examDate: medicalVisits.examDate,
+      facility: medicalVisits.facility,
     })
     .from(medicalResults)
     .innerJoin(medicalVisits, eq(medicalResults.visitId, medicalVisits.id))
@@ -76,6 +85,7 @@ export function makeResultCards(
     abbr?: string | null;
     about?: string | null;
     followUpDate?: string | null;
+    facility?: string | null;
     numericValue: string | null;
     valueText: string;
     unit: string | null;
@@ -98,6 +108,11 @@ export function makeResultCards(
       const history = [...series].reverse().map((item) => ({
         value: item.valueText,
         unit: item.unit,
+        // Reference ranges legitimately differ between labs and between
+        // assay kits at the same lab, so each measurement keeps the range
+        // it was actually judged against rather than borrowing the latest.
+        referenceRange: item.referenceRange,
+        facility: item.facility ?? null,
         examDate: item.examDate,
         status: item.status,
       }));
@@ -125,6 +140,11 @@ export function makeResultCards(
         lastFive: history.slice(-5),
         history,
         hasUnitMismatch: new Set(history.map(h => h.unit ?? "")).size > 1,
+        hasRangeMismatch:
+          new Set(history.map(h => (h.referenceRange ?? "").trim()).filter(Boolean)).size > 1,
+        facilities: Array.from(
+          new Set(history.map(h => h.facility).filter((f): f is string => Boolean(f)))
+        ),
       } satisfies ResultCard;
     })
     .sort((a, b) => {

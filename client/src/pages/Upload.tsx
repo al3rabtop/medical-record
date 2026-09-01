@@ -11,6 +11,7 @@ import {
 import { useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useProfile } from "@/contexts/ProfileContext";
+import { UploadTroubleshooting } from "@/components/UploadTroubleshooting";
 
 type Row = {
   label: string;
@@ -246,6 +247,8 @@ export default function Upload() {
             </button>
           </div>
         )}
+
+        {stage === "pick" && <UploadTroubleshooting />}
 
         {stage === "loading" && (
           <div className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white py-16">
