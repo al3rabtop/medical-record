@@ -60,7 +60,8 @@ export function MetricListView({
                     {card.history.length > 1 && (
                       <span className="mt-0.5 block text-[10px] font-semibold text-slate-400">
                         {card.history
-                          .slice(-4)
+                          .slice(0, -1)
+                          .slice(-3)
                           .map(h => h.value)
                           .join(" ← ")}
                       </span>
