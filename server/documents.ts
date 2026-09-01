@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
 import { medicalDocuments, medicalVisits } from "../drizzle/schema";
@@ -110,7 +110,8 @@ export async function listDocumentsForVisit(userId: number, visitId: number): Pr
     })
     .from(medicalDocuments)
     .innerJoin(medicalVisits, eq(medicalDocuments.visitId, medicalVisits.id))
-    .where(and(eq(medicalDocuments.visitId, visitId), eq(medicalVisits.userId, userId)));
+    .where(and(eq(medicalDocuments.visitId, visitId), eq(medicalVisits.userId, userId)))
+    .orderBy(desc(medicalDocuments.createdAt));
 }
 
 /**
