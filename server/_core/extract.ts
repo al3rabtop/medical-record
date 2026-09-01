@@ -170,7 +170,15 @@ export function registerExtractRoute(app: Express) {
     }
     const allowedImages = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     if (!isPdf && !allowedImages.includes(mediaType)) {
-      res.status(400).json({ error: "صيغة غير مدعومة. استخدم صورة أو PDF." });
+      // Name the common wrong choices explicitly — a user who exported an
+      // Excel or Word file needs to know what to do, not just that it failed.
+      const spreadsheetOrDoc =
+        /spreadsheet|excel|csv|wordprocessing|msword|officedocument/.test(mediaType);
+      res.status(400).json({
+        error: spreadsheetOrDoc
+          ? "ملفات Excel وWord وCSV غير مدعومة. صدّر التقرير كملف PDF أو صورة (JPG أو PNG) وأعد المحاولة."
+          : "صيغة غير مدعومة. ارفع ملف PDF أو صورة (JPG أو PNG).",
+      });
       return;
     }
 
