@@ -1,0 +1,53 @@
+# Project TODO
+
+- [x] Define medical visit, result, document, and status data models with non-diagnostic classifications.
+- [x] Create database tables and public read-only procedures for the medical timeline and result trends.
+- [x] Add validated seed records derived only from the five supplied laboratory reports.
+- [x] Build a complete Arabic RTL dashboard with Arabic navigation, responsive layout, and a clear medical disclaimer.
+- [x] Create a timeline section ordered by examination date with visit summaries and report metadata.
+- [x] Create result-group views showing latest value, prior values, reference range, and directional trend.
+- [x] Show clear non-diagnostic status labels for reassuring results, follow-up items, and unavailable data.
+- [x] Add a documented intake workflow for future reports that preserves the timeline and updates comparisons.
+- [x] Write Vitest coverage for derived trend and status presentation data.
+- [x] Verify the public UI visually on desktop and mobile, run checks/tests, and save a delivery checkpoint.
+- [x] Add an Arabic trend interpretation to every result card, based only on comparable current and prior measurements.
+- [x] Highlight the latest measurement separately from prior measurements and explain whether the direction is improving, worsening, stable, or unavailable.
+- [x] Add Vitest coverage for patient-friendly non-diagnostic trend interpretations and visually verify the revised cards.
+- [x] Return each indicator's complete chronological measurement history to the public dashboard.
+- [x] Display the latest five measurements directly in every indicator card from oldest to newest.
+- [x] Open an accessible dialog from each card that presents the full measurement history, current value, and non-diagnostic trend summary.
+- [x] Test the five-result display and history dialog, verify it visually, and save an updated checkpoint.
+- [x] Replace the header subtitle with the full patient name أميرة محمد علي الهسي.
+- [x] Verify the updated name in the Arabic RTL interface.
+- [x] Classify the newly supplied historical documents into clinical notes, imaging/pathology, and laboratory reports.
+- [x] Extract the actual examination date, title, facility/clinician when legible, and a source-file link for every document.
+- [x] Identify duplicate documents and relate reports belonging to the same clinical episode before importing data.
+- [x] Present a proposed chronological import plan for the historical records and obtain confirmation before modifying the public health record.
+- [x] Add the confirmed 2021 clinical visit, imaging, biopsy, and pathology events to the public timeline.
+- [x] Add the confirmed 2021–2022 laboratory events and comparable laboratory values to the public record.
+- [x] Display historical document type and linked clinical episode clearly in the timeline.
+- [x] Test the imported timeline and result histories and verify them visually.
+- [x] Add an automated assertion that imported historical visits and laboratory rows appear in the public dashboard data.
+- [x] Open a result-history dialog after import to confirm the historical values are visible alongside recent measurements.
+- [x] Add an automated assertion that imported historical visits and laboratory rows appear in the public dashboard data.
+- [x] Open a result-history dialog after import to confirm the historical values are visible alongside recent measurements.
+- [x] Extend import verification to assert historical and recent measurements coexist in the history data rendered by the dialog.
+- [x] Extend import verification to assert historical and recent measurements coexist in the history data rendered by the dialog.
+- [x] Add a rendering test for the history table inside the metric dialog with imported historical and recent rows.
+- [x] Review and approve a new top-level portal architecture separating laboratory results, radiology, and physician reports before implementation.
+- [x] After approval, create a dedicated laboratory portal focused on result cards, trends, and complete measurement history.
+- [x] After approval, create a dedicated radiology portal grouped by modality such as CT, MRI, X-ray, ultrasound, and image-guided procedures.
+- [x] After approval, create a dedicated physician-reports portal grouped by specialty, visit date, clinician, and care plan.
+- [x] After approval, create a distinct pathology/biopsy area linked to both the related procedure and physician episode without mixing it into laboratory trends.
+- [x] Replace the laboratory-heavy homepage with an icon-based gateway overview showing counts and latest updates for all five portals.
+- [x] Add independent Arabic RTL routes and persistent navigation for home, laboratory, radiology, physician reports, pathology/biopsy, and the unified timeline.
+- [x] Classify radiology records by CT, MRI, X-ray, fluoroscopy, ultrasound, and image-guided procedure.
+- [x] Add report-detail dialogs that preserve source wording, date, clinician/facility, and linked episode without introducing diagnosis.
+- [x] Add Vitest coverage for portal classification and verify every route on desktop and mobile before saving a checkpoint.
+- [x] Group physician reports by specialty and surface a care-plan excerpt within each specialty section.
+- [x] Link the biopsy/pathology episode to the related physician oncology visit in the pathology portal.
+- [x] Show the latest record date separately on every portal card on the homepage.
+- [x] Add optional facility storage to medical visits and display facility information or an explicit unavailable state in report dialogs.
+- [x] Run a focused final verification of physician grouping, pathology-to-oncology linkage, portal latest dates, and facility display before saving the consolidated version.
+- [x] Show the latest record date on the homepage unified-timeline card, consistent with the four portal cards.
+- [x] Add an automated assertion for the unified timeline latest-update metadata.
