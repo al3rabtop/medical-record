@@ -93,7 +93,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
         {t.documentViewer.viewOriginalReportCount(docs.data.length)}
       </button>
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent dir={dir} className="border-slate-200 bg-[#fbfcfb] sm:max-w-md">
+        <DialogContent dir={dir} className="border-slate-200 bg-card sm:max-w-md">
           <DialogHeader className="text-right rtl:text-right ltr:text-left">
             <DialogTitle className="text-lg font-extrabold text-slate-950">{t.documentViewer.chooseFileTitle}</DialogTitle>
             <DialogDescription className="text-sm text-slate-600">
@@ -107,7 +107,7 @@ export function ViewOriginalReport({ visitIds }: { visitIds: number[] }) {
                 className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-800">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300">
                     <FileText className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">

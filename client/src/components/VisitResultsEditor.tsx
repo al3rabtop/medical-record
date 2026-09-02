@@ -83,7 +83,7 @@ export function VisitResultsEditor({ visitId }: { visitId: number }) {
       <p className="mb-3 text-sm font-extrabold text-slate-900">{t.visitEditor.editResults}</p>
 
       {err && (
-        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{err}</p>
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">{err}</p>
       )}
 
       {results.isLoading && (

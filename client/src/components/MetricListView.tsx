@@ -46,7 +46,7 @@ export function MetricListView({
                 <tr
                   key={card.code}
                   onClick={() => onOpen(card.code)}
-                  className={`cursor-pointer transition hover:bg-teal-50/50 ${i === 0 ? "" : "border-t border-slate-100"}`}
+                  className={`cursor-pointer transition hover:bg-teal-50/50 dark:hover:bg-teal-950/30 ${i === 0 ? "" : "border-t border-slate-100"}`}
                 >
                   <td className="px-4 py-3">
                     <span className="block font-bold text-slate-800">{card.label}</span>

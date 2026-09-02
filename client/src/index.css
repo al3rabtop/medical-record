@@ -31,6 +31,12 @@
 }
 
 :root {
+  /* Tells the browser to render native widgets (input/date-picker chrome,
+     select dropdowns, checkboxes, scrollbars) with its own light styling —
+     overridden to dark below so plain <input>/<textarea>/<select> elements
+     with no explicit background class don't fall back to a white native
+     control floating on an otherwise dark page. */
+  color-scheme: light;
   --radius: 0.75rem;
   --background: oklch(0.978 0.006 158);
   --foreground: oklch(0.22 0.027 167);
@@ -53,8 +59,9 @@
   --ring: oklch(0.52 0.09 171);
 }
 
-/* Dark mode overrides the shadcn token set below, plus Tailwind slate color variables (the app hand-written screens use bg-slate/text-slate/border-slate directly as their neutral scale), so every screen re-themes without touching component code. Slate shades are swapped by role (50 with 950, 100 with 900, and so on) using Tailwind own real color values, not an inverted filter. Brand and status colors are left as-is since they already read fine on a dark page. */
+/* Dark mode overrides the shadcn token set below, plus Tailwind slate color variables (the app hand-written screens use bg-slate/text-slate/border-slate directly as their neutral scale), so every screen re-themes without touching component code. Slate shades are swapped by role (50 with 950, 100 with 900, and so on) using Tailwind own real color values, not an inverted filter. Solid brand/status buttons and tiles (e.g. bg-teal-800 text-white) are left alone since they already read fine on a dark page; pale accent surfaces (notices, warnings, badges) get an explicit dark: variant per component instead, since several of those shades are also used as solid button colors and cannot be safely swapped globally. */
 .dark {
+  color-scheme: dark;
   --background: oklch(0.16 0.02 165);
   --foreground: oklch(0.94 0.01 160);
   --card: oklch(0.2 0.022 163);

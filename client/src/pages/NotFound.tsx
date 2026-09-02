@@ -14,11 +14,11 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100" dir={dir}>
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-slate-900/80">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse" />
+              <div className="absolute inset-0 bg-red-100 rounded-full animate-pulse dark:bg-red-950/40" />
               <AlertCircle className="relative h-16 w-16 text-red-500" />
             </div>
           </div>

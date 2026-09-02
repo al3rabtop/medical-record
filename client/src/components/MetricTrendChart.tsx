@@ -73,7 +73,7 @@ export function MetricTrendChart({
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#cbd5e1"
+              stroke="var(--color-slate-300)"
               strokeWidth={1.5}
               fill="none"
               dot={false}
@@ -119,21 +119,27 @@ export function MetricTrendChart({
             />
           )}
 
-          {!compact && <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />}
+          {!compact && <CartesianGrid stroke="var(--color-slate-200)" strokeDasharray="3 3" vertical={false} />}
 
-          <XAxis dataKey="examDate" hide={compact} tick={{ fontSize: 10, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+          <XAxis dataKey="examDate" hide={compact} tick={{ fontSize: 10, fill: "var(--color-slate-400)" }} tickLine={false} axisLine={false} />
           <YAxis
             hide={compact}
             domain={[bounds.min, bounds.max]}
-            tick={{ fontSize: 10, fill: "#94a3b8" }}
+            tick={{ fontSize: 10, fill: "var(--color-slate-400)" }}
             tickLine={false}
             axisLine={false}
             width={38}
           />
 
           <Tooltip
-            contentStyle={{ fontSize: 12, borderRadius: 12, border: "1px solid #e2e8f0" }}
-            labelStyle={{ fontWeight: 700, color: "#0f172a" }}
+            contentStyle={{
+              fontSize: 12,
+              borderRadius: 12,
+              border: "1px solid var(--color-slate-200)",
+              backgroundColor: "var(--card)",
+            }}
+            labelStyle={{ fontWeight: 700, color: "var(--color-slate-900)" }}
+            itemStyle={{ color: "var(--color-slate-700)" }}
             formatter={(value: number, _n, item: any) => [
               `${value}${item?.payload?.unit ? " " + item.payload.unit : ""}`,
               t.table.result,

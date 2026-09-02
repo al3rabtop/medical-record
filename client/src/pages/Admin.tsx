@@ -33,7 +33,7 @@ export default function Admin() {
         </p>
 
         {totals.pending > 0 && (
-          <div className="mb-5 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          <div className="mb-5 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
             <Clock className="h-4 w-4 shrink-0" />
             {t.admin.pendingAccountsNotice(totals.pending)}
           </div>

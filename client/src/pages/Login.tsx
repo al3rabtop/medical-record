@@ -52,7 +52,7 @@ export default function Login() {
 
   return (
     <div
-      className="relative flex min-h-screen items-center justify-center bg-[#f7f9f7] px-4"
+      className="relative flex min-h-screen items-center justify-center bg-background px-4"
       dir={dir}
     >
       <div className="absolute top-4 end-4"><LocaleThemeSwitcher /></div>
@@ -126,13 +126,13 @@ export default function Login() {
           </div>
 
           {notice && (
-            <p className="rounded-xl bg-emerald-50 px-3 py-3 text-sm font-bold leading-6 text-emerald-800">
+            <p className="rounded-xl bg-emerald-50 px-3 py-3 text-sm font-bold leading-6 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
               {notice}
             </p>
           )}
 
           {error && (
-            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
+            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
               {error}
             </p>
           )}

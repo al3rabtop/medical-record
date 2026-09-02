@@ -263,22 +263,22 @@ export default function Upload() {
           {t.upload.pageDescription}
         </p>
         {activeProfile && (
-          <p className="mb-5 rounded-xl bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-900">
+          <p className="mb-5 rounded-xl bg-teal-50 px-4 py-2.5 text-sm font-bold text-teal-900 dark:bg-teal-950/40 dark:text-teal-200">
             {t.upload.willSaveToProfile(activeProfile.name)}
           </p>
         )}
 
         {error && (
-          <div className="mb-5 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          <div className="mb-5 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </div>
         )}
 
         {exactDuplicateNotice && (
-          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
-            <p className="text-base font-extrabold text-amber-900">{t.upload.exactDuplicateTitle}</p>
-            <p className="mt-1 text-sm leading-6 text-amber-800">{t.upload.exactDuplicateBody}</p>
+          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">
+            <p className="text-base font-extrabold text-amber-900 dark:text-amber-200">{t.upload.exactDuplicateTitle}</p>
+            <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-300">{t.upload.exactDuplicateBody}</p>
           </div>
         )}
 
@@ -328,9 +328,9 @@ export default function Upload() {
         {stage === "review" && (
           <div className="flex flex-col gap-5">
             {dup && dup.status === "file_duplicate" && (
-              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
-                <p className="text-base font-extrabold text-amber-900">{t.upload.exactDuplicateTitle}</p>
-                <p className="mt-1 text-sm leading-6 text-amber-800">{t.upload.exactDuplicateBody}</p>
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">
+                <p className="text-base font-extrabold text-amber-900 dark:text-amber-200">{t.upload.exactDuplicateTitle}</p>
+                <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-300">{t.upload.exactDuplicateBody}</p>
                 <div className="mt-4">
                   <button
                     onClick={() => { setDup(null); setStage("pick"); setRows([]); setPendingFile(null); }}
@@ -343,9 +343,9 @@ export default function Upload() {
             )}
 
             {dup && dup.status === "conflict" && (
-              <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-5">
-                <p className="text-base font-extrabold text-red-900">{t.upload.conflictTitle}</p>
-                <p className="mt-1 text-sm leading-6 text-red-800">{t.upload.conflictBody}</p>
+              <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-5 dark:border-red-800/60 dark:bg-red-950/30">
+                <p className="text-base font-extrabold text-red-900 dark:text-red-200">{t.upload.conflictTitle}</p>
+                <p className="mt-1 text-sm leading-6 text-red-800 dark:text-red-300">{t.upload.conflictBody}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => { setDup(null); doSave(); }}
@@ -364,15 +364,15 @@ export default function Upload() {
             )}
 
             {dup && (dup.status === "exact_duplicate" || dup.status === "partial") && (
-              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
-                <p className="text-base font-extrabold text-amber-900">
+              <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">
+                <p className="text-base font-extrabold text-amber-900 dark:text-amber-200">
                   {dup.status === "exact_duplicate"
                     ? t.upload.duplicateExact
                     : dup.matchedBy === "hospitalVisitNumber"
                       ? t.upload.duplicateSameVisitNumber
                       : t.upload.duplicatePartial}
                 </p>
-                <p className="mt-1 text-sm leading-6 text-amber-800">
+                <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-300">
                   {t.upload.duplicateHasRecord(dup.examDate, dup.existingCount)}
                   {dup.status === "exact_duplicate"
                     ? t.upload.duplicateAllIdentical
@@ -381,7 +381,7 @@ export default function Upload() {
 
                 {dup.newLabels.length > 0 && (
                   <div className="mt-4 rounded-xl bg-white p-3">
-                    <p className="text-sm font-bold text-emerald-800">
+                    <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
                       {t.upload.newTestsNotInRecord(dup.newLabels.length)}
                     </p>
                     <p className="mt-1 text-xs leading-6 text-slate-600">{dup.newLabels.join("، ")}</p>
@@ -390,7 +390,7 @@ export default function Upload() {
 
                 {dup.changed.length > 0 && (
                   <div className="mt-3 rounded-xl bg-white p-3">
-                    <p className="text-sm font-bold text-amber-800">
+                    <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
                       {t.upload.existingWithDifferentValue(dup.changed.length)}
                     </p>
                     <ul className="mt-2 space-y-1 text-xs text-slate-600">
@@ -406,7 +406,7 @@ export default function Upload() {
                 )}
 
                 {dup.identicalLabels.length > 0 && (
-                  <p className="mt-3 text-xs text-amber-700">
+                  <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
                     {t.upload.identicalWillBeIgnored(dup.identicalLabels.length)}
                   </p>
                 )}
@@ -439,7 +439,7 @@ export default function Upload() {
                         patientIdentifier,
                       })}
                       disabled={mergeReport.isPending}
-                      className="rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+                      className="rounded-xl border border-amber-400 bg-white px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/40"
                     >
                       {t.upload.updateChangedToo}
                     </button>
@@ -465,7 +465,7 @@ export default function Upload() {
             )}
 
             {lowConfidenceCount > 0 && (
-              <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+              <div className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 {t.upload.lowConfidenceWarning(lowConfidenceCount)}
               </div>
@@ -478,7 +478,7 @@ export default function Upload() {
                   type="date"
                   value={examDate}
                   onChange={e => setExamDate(e.target.value)}
-                  className={`rounded-xl border px-3 py-2 text-sm outline-none focus:border-teal-700 ${examDate ? "border-slate-200" : "border-amber-400 bg-amber-50"}`}
+                  className={`rounded-xl border px-3 py-2 text-sm outline-none focus:border-teal-700 ${examDate ? "border-slate-200" : "border-amber-400 bg-amber-50 dark:bg-amber-950/30"}`}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -535,7 +535,7 @@ export default function Upload() {
                   {rows.map((r, i) => {
                     const low = r.confidence === "low";
                     return (
-                      <tr key={i} className={`border-b border-slate-100 ${low ? "bg-amber-50/60" : ""}`}>
+                      <tr key={i} className={`border-b border-slate-100 ${low ? "bg-amber-50/60 dark:bg-amber-950/20" : ""}`}>
                         <td className="p-2">
                           <input
                             value={r.label}
@@ -589,7 +589,7 @@ export default function Upload() {
                         <td className="p-2">
                           <button
                             onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))}
-                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                             title={t.upload.deleteRow}
                           >
                             <Trash2 className="h-4 w-4" />

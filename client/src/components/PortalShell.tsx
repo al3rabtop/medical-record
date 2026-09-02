@@ -34,17 +34,17 @@ export function PortalShell({ children }: { children: ReactNode }) {
   const { t, dir } = useLocale();
   const navigation = useNavigation(t);
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#f7f9f7] text-slate-900" dir={dir}>
-      <header className="sticky top-0 z-40 border-b border-white/80 bg-[#f7f9f7]/95 backdrop-blur-xl">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground" dir={dir}>
+      <header className="sticky top-0 z-40 border-b border-white/80 bg-background/95 backdrop-blur-xl dark:border-slate-800">
         <div className="container flex h-[4.75rem] items-center justify-between gap-4">
           <Link href="/" className="flex shrink-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-teal-700">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-800 text-white shadow-[0_8px_20px_-8px_rgba(15,118,110,0.8)]"><HeartPulse className="h-5 w-5" /></span>
-            <span><span className="block text-base font-extrabold tracking-tight text-teal-950">{t.app.name}</span>{(activeProfile?.name ?? patientName) && <span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700">{activeProfile?.name ?? patientName}</span>}</span>
+            <span><span className="block text-base font-extrabold tracking-tight text-teal-950 dark:text-teal-300">{t.app.name}</span>{(activeProfile?.name ?? patientName) && <span className="block text-[10px] font-bold tracking-[0.08em] text-teal-700 dark:text-teal-400">{activeProfile?.name ?? patientName}</span>}</span>
           </Link>
-          <nav className="hidden items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 lg:flex" aria-label={t.nav.portalsLabel}>
+          <nav className="hidden items-center gap-1 rounded-full border border-slate-200 bg-white/80 p-1 lg:flex dark:bg-slate-900/80" aria-label={t.nav.portalsLabel}>
             {navigation.map(({ href, label, Icon }) => {
               const active = href === "/" ? location === "/" : location.startsWith(href);
-              return <Link key={href} href={href} className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition ${active ? "bg-teal-800 text-white shadow-sm" : "text-slate-600 hover:bg-teal-50 hover:text-teal-900"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
+              return <Link key={href} href={href} className={`flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition ${active ? "bg-teal-800 text-white shadow-sm" : "text-slate-600 hover:bg-teal-50 hover:text-teal-900 dark:hover:bg-teal-950/40 dark:hover:text-teal-300"}`}><Icon className="h-3.5 w-3.5" />{label}</Link>;
             })}
           </nav>
           <div className="hidden items-center gap-2 sm:flex">
@@ -70,5 +70,5 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
 export function MedicalNotice() {
   const { t } = useLocale();
-  return <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 sm:flex sm:items-center sm:gap-4 sm:p-5"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700 shadow-sm"><ShieldCheck className="h-5 w-5" /></span><p className="mt-3 text-sm leading-6 text-slate-700 sm:mt-0"><strong className="text-slate-900">{t.notice.title}</strong> {t.notice.body}</p></div>;
+  return <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4 sm:flex sm:items-center sm:gap-4 sm:p-5 dark:border-sky-900/50 dark:bg-sky-950/30"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-sky-700 shadow-sm dark:text-sky-300"><ShieldCheck className="h-5 w-5" /></span><p className="mt-3 text-sm leading-6 text-slate-700 sm:mt-0"><strong className="text-slate-900">{t.notice.title}</strong> {t.notice.body}</p></div>;
 }

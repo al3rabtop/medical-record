@@ -18,7 +18,7 @@ export function LocaleThemeSwitcher({ className = "" }: { className?: string }) 
           type="button"
           onClick={() => setLocale("ar")}
           aria-pressed={locale === "ar"}
-          className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition ${locale === "ar" ? "bg-teal-800 text-white" : "text-slate-600 hover:bg-teal-50"}`}
+          className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition ${locale === "ar" ? "bg-teal-800 text-white" : "text-slate-600 hover:bg-teal-50 dark:hover:bg-teal-950/40"}`}
         >
           {t.locale.ar}
         </button>
@@ -26,7 +26,7 @@ export function LocaleThemeSwitcher({ className = "" }: { className?: string }) 
           type="button"
           onClick={() => setLocale("en")}
           aria-pressed={locale === "en"}
-          className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition ${locale === "en" ? "bg-teal-800 text-white" : "text-slate-600 hover:bg-teal-50"}`}
+          className={`rounded-full px-2.5 py-1.5 text-xs font-bold transition ${locale === "en" ? "bg-teal-800 text-white" : "text-slate-600 hover:bg-teal-50 dark:hover:bg-teal-950/40"}`}
         >
           {t.locale.en}
         </button>

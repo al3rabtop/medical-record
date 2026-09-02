@@ -27,8 +27,8 @@ type MetricCardProps = {
 };
 
 const trendStyle: Record<Trend, { Icon: typeof ArrowUpRight; className: string }> = {
-  ارتفع: { Icon: ArrowUpRight, className: "bg-rose-50 text-rose-700" },
-  انخفض: { Icon: ArrowDownLeft, className: "bg-sky-50 text-sky-700" },
+  ارتفع: { Icon: ArrowUpRight, className: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
+  انخفض: { Icon: ArrowDownLeft, className: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300" },
   مستقر: { Icon: Minus, className: "bg-slate-100 text-slate-600" },
   "بيانات غير متوفرة": { Icon: Minus, className: "bg-slate-100 text-slate-500" },
 };
@@ -42,9 +42,9 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
   const testAbout = about ?? fallback?.about ?? null;
   const interpretationText = t.interpretation[interpretation.key];
   const interpretationStyle = {
-    improving: { Icon: CheckCircle2, className: "border-emerald-100 bg-emerald-50 text-emerald-900" },
-    worsening: { Icon: CircleAlert, className: "border-amber-100 bg-amber-50 text-amber-900" },
-    stable: { Icon: Minus, className: "border-sky-100 bg-sky-50 text-sky-900" },
+    improving: { Icon: CheckCircle2, className: "border-emerald-100 bg-emerald-50 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-200" },
+    worsening: { Icon: CircleAlert, className: "border-amber-100 bg-amber-50 text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200" },
+    stable: { Icon: Minus, className: "border-sky-100 bg-sky-50 text-sky-900 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-200" },
     unavailable: { Icon: Info, className: "border-slate-200 bg-slate-50 text-slate-700" },
   }[interpretation.tone];
   const InterpretationIcon = interpretationStyle.Icon;
@@ -118,7 +118,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
                   return (
                     <div
                       key={item?.examDate ?? `empty-${index}`}
-                      className={`min-w-0 rounded-lg px-1 py-2 text-center ${item ? "bg-teal-50 text-teal-950" : "bg-slate-50 text-slate-300"}`}
+                      className={`min-w-0 rounded-lg px-1 py-2 text-center ${item ? "bg-teal-50 text-teal-950 dark:bg-teal-950/40 dark:text-teal-200" : "bg-slate-50 text-slate-300"}`}
                     >
                       <p className="truncate text-xs font-extrabold">{item?.value ?? "—"}</p>
                       <p className="mt-1 truncate text-[9px] text-slate-400">

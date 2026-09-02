@@ -66,11 +66,11 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
 
   return (
     <>
-      <tr className={`border-b border-slate-100 ${user.status === "suspended" ? "bg-red-50/40" : user.status === "pending" ? "bg-amber-50/50" : ""}`}>
+      <tr className={`border-b border-slate-100 ${user.status === "suspended" ? "bg-red-50/40 dark:bg-red-950/20" : user.status === "pending" ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}>
         <td className="p-3 font-bold text-slate-800">
           {user.patientName ?? "—"}
           {user.role === "admin" && (
-            <span className="mr-2 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800">{t.admin.adminBadge}</span>
+            <span className="mr-2 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-950/40 dark:text-teal-300">{t.admin.adminBadge}</span>
           )}
           {isSelf && (
             <span className="mr-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">{t.admin.youBadge}</span>
@@ -83,16 +83,16 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
         <td className="p-3">
           <div className="flex flex-wrap gap-1">
             {user.status === "pending" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">{t.admin.pendingBadge}</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{t.admin.pendingBadge}</span>
             )}
             {user.status === "suspended" && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">{t.admin.suspendedBadge}</span>
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/40 dark:text-red-300">{t.admin.suspendedBadge}</span>
             )}
             {!user.canUpload && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">{t.admin.uploadDisabledBadge}</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{t.admin.uploadDisabledBadge}</span>
             )}
             {user.status === "active" && user.canUpload && (
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{t.admin.activeBadge}</span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{t.admin.activeBadge}</span>
             )}
           </div>
         </td>
@@ -114,13 +114,13 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
               <KeyRound className="h-3.5 w-3.5" />{t.admin.password}
             </button>
             <button onClick={() => setUpload.mutate({ userId: user.id, canUpload: !user.canUpload })}
-              disabled={busy} className={`${btn} ${user.canUpload ? "text-slate-600 hover:border-amber-300 hover:text-amber-800" : "border-amber-300 bg-amber-50 text-amber-800"}`}>
+              disabled={busy} className={`${btn} ${user.canUpload ? "text-slate-600 hover:border-amber-300 hover:text-amber-800" : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300"}`}>
               <Upload className="h-3.5 w-3.5" />{user.canUpload ? t.admin.disableUpload : t.admin.enableUpload}
             </button>
             {!isSelf && (
               <>
                 {user.status !== "pending" && <button onClick={() => setStatus.mutate({ userId: user.id, status: user.status === "active" ? "suspended" : "active" })}
-                  disabled={busy} className={`${btn} ${user.status === "active" ? "text-slate-600 hover:border-red-300 hover:text-red-700" : "border-emerald-300 bg-emerald-50 text-emerald-800"}`}>
+                  disabled={busy} className={`${btn} ${user.status === "active" ? "text-slate-600 hover:border-red-300 hover:text-red-700" : "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"}`}>
                   <Ban className="h-3.5 w-3.5" />{user.status === "active" ? t.admin.ban : t.admin.unban}
                 </button>}
                 <button onClick={() => setRole.mutate({ userId: user.id, role: user.role === "admin" ? "user" : "admin" })}
@@ -142,7 +142,7 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
         <tr className="border-b border-slate-100 bg-slate-50/70">
           <td colSpan={7} className="p-4">
             {err && (
-              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{err}</p>
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">{err}</p>
             )}
 
             {mode === "edit" && (
@@ -185,9 +185,9 @@ export function AdminUserRow({ user, isSelf }: { user: AdminUser; isSelf: boolea
             )}
 
             {mode === "confirmDelete" && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                <p className="text-sm font-extrabold text-red-800">{t.admin.permanentDeleteTitle}</p>
-                <p className="mt-1 text-xs leading-5 text-red-700">
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+                <p className="text-sm font-extrabold text-red-800 dark:text-red-300">{t.admin.permanentDeleteTitle}</p>
+                <p className="mt-1 text-xs leading-5 text-red-700 dark:text-red-300/90">
                   {t.admin.permanentDeletePrefix} <span className="font-bold" dir="ltr">{user.email}</span> {t.admin.permanentDeleteSuffix(user.visitCount, user.resultCount)}
                 </p>
                 <div className="mt-3 flex gap-2">

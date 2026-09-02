@@ -18,10 +18,10 @@ export default function Home() {
 
   const data = dashboard.data;
   const portals = [
-    { href: "/labs", label: t.home.portals.laboratory.label, count: data.portalCounts.laboratory, latest: data.portalLatest.laboratory, detail: t.home.portals.laboratory.detail(data.cards.length), Icon: FlaskConical, accent: "bg-violet-50 text-violet-800" },
-    { href: "/radiology", label: t.home.portals.radiology.label, count: data.portalCounts.radiology, latest: data.portalLatest.radiology, detail: t.home.portals.radiology.detail, Icon: ScanLine, accent: "bg-sky-50 text-sky-800" },
-    { href: "/physician-reports", label: t.home.portals.physician.label, count: data.portalCounts.physician, latest: data.portalLatest.physician, detail: t.home.portals.physician.detail, Icon: Stethoscope, accent: "bg-emerald-50 text-emerald-800" },
-    { href: "/pathology", label: t.home.portals.pathology.label, count: data.portalCounts.pathology, latest: data.portalLatest.pathology, detail: t.home.portals.pathology.detail, Icon: Dna, accent: "bg-rose-50 text-rose-800" },
+    { href: "/labs", label: t.home.portals.laboratory.label, count: data.portalCounts.laboratory, latest: data.portalLatest.laboratory, detail: t.home.portals.laboratory.detail(data.cards.length), Icon: FlaskConical, accent: "bg-violet-50 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300" },
+    { href: "/radiology", label: t.home.portals.radiology.label, count: data.portalCounts.radiology, latest: data.portalLatest.radiology, detail: t.home.portals.radiology.detail, Icon: ScanLine, accent: "bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300" },
+    { href: "/physician-reports", label: t.home.portals.physician.label, count: data.portalCounts.physician, latest: data.portalLatest.physician, detail: t.home.portals.physician.detail, Icon: Stethoscope, accent: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" },
+    { href: "/pathology", label: t.home.portals.pathology.label, count: data.portalCounts.pathology, latest: data.portalLatest.pathology, detail: t.home.portals.pathology.detail, Icon: Dna, accent: "bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" },
   ];
 
   return (
@@ -49,13 +49,13 @@ export default function Home() {
                   key={r.resultId}
                   href="/labs"
                   className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm transition hover:opacity-80 ${
-                    r.overdue ? "bg-amber-50 text-amber-900" : "bg-teal-50 text-teal-900"
+                    r.overdue ? "bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200" : "bg-teal-50 text-teal-900 dark:bg-teal-950/40 dark:text-teal-200"
                   }`}
                 >
                   <span className="font-bold">{r.label}</span>
                   <span className="flex items-center gap-2">
                     {r.overdue && (
-                      <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900">{t.home.overdue}</span>
+                      <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-900 dark:bg-amber-800/60 dark:text-amber-200">{t.home.overdue}</span>
                     )}
                     <span dir="ltr" className="font-bold">{r.followUpDate}</span>
                   </span>
@@ -72,7 +72,7 @@ export default function Home() {
         </div>
         <Link href="/timeline" className="mt-5 flex flex-col gap-4 rounded-[1.5rem] bg-teal-950 p-6 text-white transition hover:bg-teal-900 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-4"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-teal-200"><History className="h-5 w-5" /></span><div><h3 className="font-extrabold">{t.home.fullTimeline}</h3><p className="mt-1 text-sm text-slate-300">{t.home.fullTimelineDescription}</p></div></div><div className="flex flex-col gap-1 text-start"><span className="text-sm font-extrabold text-teal-200">{t.timeline.countLabel(data.visits.length)}</span><span className="text-xs text-slate-300"><strong className="text-teal-100">{t.home.lastRecord} </strong>{data.latestVisit ? `${formatMedicalDate(data.latestVisit.examDate, locale)} · ${data.latestVisit.reportType}` : t.home.noRecords}</span></div></Link>
       </section>
-      <section className="container mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]"><div><p className="section-kicker">{t.home.followUpSummaryKicker}</p><h2 className="section-title">{t.home.followUpSummaryTitle}</h2><div className="mt-5 grid gap-3">{data.followUp.slice(0, 3).map((item) => <div key={item.code} className="rounded-2xl border border-amber-100 bg-white p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-extrabold text-slate-900">{item.label}</h3><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800">{t.status.follow_up}</span></div><p className="mt-2 text-sm text-slate-600">{t.home.latestResultPrefix} {item.value} · {t.interpretation[item.interpretation.key].label}</p></div>)}</div></div><aside className="rounded-[1.6rem] border border-teal-100 bg-[#eff8f5] p-6"><CircleAlert className="h-5 w-5 text-teal-800" /><h2 className="mt-4 text-xl font-extrabold text-teal-950">{t.home.organizeBeforeInterpretTitle}</h2><p className="mt-3 text-sm leading-7 text-teal-900/75">{t.home.organizeBeforeInterpretBody}</p></aside></section>
+      <section className="container mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]"><div><p className="section-kicker">{t.home.followUpSummaryKicker}</p><h2 className="section-title">{t.home.followUpSummaryTitle}</h2><div className="mt-5 grid gap-3">{data.followUp.slice(0, 3).map((item) => <div key={item.code} className="rounded-2xl border border-amber-100 bg-white p-4 dark:border-amber-900/40"><div className="flex items-center justify-between gap-3"><h3 className="font-extrabold text-slate-900">{item.label}</h3><span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">{t.status.follow_up}</span></div><p className="mt-2 text-sm text-slate-600">{t.home.latestResultPrefix} {item.value} · {t.interpretation[item.interpretation.key].label}</p></div>)}</div></div><aside className="rounded-[1.6rem] border border-teal-100 bg-[#eff8f5] p-6 dark:border-teal-900/50 dark:bg-teal-950/30"><CircleAlert className="h-5 w-5 text-teal-800 dark:text-teal-300" /><h2 className="mt-4 text-xl font-extrabold text-teal-950 dark:text-teal-100">{t.home.organizeBeforeInterpretTitle}</h2><p className="mt-3 text-sm leading-7 text-teal-900/75 dark:text-teal-200/80">{t.home.organizeBeforeInterpretBody}</p></aside></section>
     </PortalShell>
   );
 }

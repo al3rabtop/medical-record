@@ -68,7 +68,7 @@ export default function Profiles() {
         </p>
 
         {err && (
-          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{err}</p>
+          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">{err}</p>
         )}
 
         <div className="space-y-3">
@@ -99,17 +99,17 @@ export default function Profiles() {
               ) : (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-800">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300">
                       <Users className="h-5 w-5" />
                     </span>
                     <div>
                       <p className="font-extrabold text-slate-900">
                         {p.name}
                         {p.isPrimary && (
-                          <span className="mr-2 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800">{t.profiles.primaryBadge}</span>
+                          <span className="mr-2 rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-800 dark:bg-teal-950/40 dark:text-teal-300">{t.profiles.primaryBadge}</span>
                         )}
                         {activeProfile?.id === p.id && (
-                          <span className="mr-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{t.profiles.currentlySelectedBadge}</span>
+                          <span className="mr-2 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{t.profiles.currentlySelectedBadge}</span>
                         )}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-500">
@@ -131,7 +131,7 @@ export default function Profiles() {
                     </button>
                     {!p.isPrimary && (
                       <button onClick={() => { setConfirmId(p.id); setErr(null); }}
-                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700">
+                        className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500 hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-400">
                         <Trash2 className="h-3.5 w-3.5" />{t.profiles.delete}
                       </button>
                     )}
@@ -140,9 +140,9 @@ export default function Profiles() {
               )}
 
               {confirmId === p.id && (
-                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4">
-                  <p className="text-sm font-extrabold text-red-800">{t.profiles.deleteProfileTitle}</p>
-                  <p className="mt-1 text-xs leading-5 text-red-700">
+                <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+                  <p className="text-sm font-extrabold text-red-800 dark:text-red-300">{t.profiles.deleteProfileTitle}</p>
+                  <p className="mt-1 text-xs leading-5 text-red-700 dark:text-red-300/90">
                     {t.profiles.deleteProfilePrefix} <span className="font-bold">{p.name}</span> {t.profiles.deleteProfileSuffix(p.visitCount)}
                   </p>
                   <div className="mt-3 flex gap-2">

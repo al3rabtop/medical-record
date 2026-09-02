@@ -65,7 +65,7 @@ export function UploadTroubleshooting() {
             {copied ? t.uploadTroubleshooting.copied : t.uploadTroubleshooting.copyText}
           </button>
 
-          <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900">
+          <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
             <span className="font-extrabold">{t.uploadTroubleshooting.beforeSavingLabel}</span> {t.uploadTroubleshooting.beforeSavingWarning}
           </p>
         </div>

@@ -115,10 +115,10 @@ export default function Settings() {
             </label>
 
             {error && (
-              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</p>
+              <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>
             )}
             {done && (
-              <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800">
+              <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
                 <Check className="h-4 w-4" />
                 {t.settings.passwordChangedSuccess}
               </p>

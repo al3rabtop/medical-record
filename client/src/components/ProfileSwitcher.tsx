@@ -43,8 +43,8 @@ export function ProfileSwitcher() {
                 setProfileId(p.id);
                 setOpen(false);
               }}
-              className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-start transition hover:bg-teal-50 ${
-                p.id === activeProfile?.id ? "bg-teal-50/60" : ""
+              className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-start transition hover:bg-teal-50 dark:hover:bg-teal-950/30 ${
+                p.id === activeProfile?.id ? "bg-teal-50/60 dark:bg-teal-950/30" : ""
               }`}
             >
               <span className="min-w-0">
