@@ -187,6 +187,12 @@ export const ar: Dictionary = {
     "أخت": "أخت",
     "أخرى": "أخرى",
   } as Record<string, string>,
+  departmentLabels: {
+    "المختبر": "المختبر",
+    "أمراض الدم والأورام": "أمراض الدم والأورام",
+    "الطب الباطني": "الطب الباطني",
+    "الأورام": "الأورام",
+  } as Record<string, string>,
   notFound: {
     title: "الصفحة غير موجودة",
     description: "عذراً، الصفحة التي تبحث عنها غير موجودة.",
@@ -314,8 +320,8 @@ export const ar: Dictionary = {
     oneClinicalLoopTitle: "حلقة سريرية واحدة، سجلات واضحة",
     linkedToVisit: (department: string, date: string) => `مرتبط بزيارة ${department} — ${date}`,
     narrativeWithOncology: (department: string, date: string) =>
-      `خزعة الكبد بتاريخ 7 يونيو 2021 مرتبطة بنتيجة علم الأمراض الصادرة في 10 يونيو 2021، وزيارة ${department} بتاريخ ${date}.`,
-    narrativeWithoutOncology: "خزعة الكبد بتاريخ 7 يونيو 2021 مرتبطة بنتيجة علم الأمراض الصادرة في 10 يونيو 2021.",
+      `إجراء الخزعة مرتبط بنتيجة علم الأمراض الخاصة به، وبزيارة ${department} بتاريخ ${date}.`,
+    narrativeWithoutOncology: "إجراء الخزعة مرتبط بنتيجة علم الأمراض الخاصة به أدناه.",
     kicker: "الخزعة والنتيجة",
     detailsTitle: "تفاصيل الحلقة المرتبطة",
     linkedToBiopsy: "مرتبط بإجراء خزعة الكبد",

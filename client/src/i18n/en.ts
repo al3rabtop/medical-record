@@ -192,6 +192,19 @@ And if you're unable to export a file, just show me the table and I'll take a sc
     "أخت": "Sister",
     "أخرى": "Other",
   } as Record<string, string>,
+  /**
+   * Display labels only, keyed by the raw department string stored in the
+   * database (see server/_data/labsImportData.ts) — an unmapped value
+   * (e.g. a department name transcribed from a future upload) falls back to
+   * showing the stored value as-is rather than disappearing, same as
+   * categoryLabels/relationLabels.
+   */
+  departmentLabels: {
+    "المختبر": "Laboratory",
+    "أمراض الدم والأورام": "Hematology & Oncology",
+    "الطب الباطني": "Internal Medicine",
+    "الأورام": "Oncology",
+  } as Record<string, string>,
   notFound: {
     title: "Page Not Found",
     description: "Sorry, the page you are looking for doesn't exist.",
@@ -319,8 +332,8 @@ And if you're unable to export a file, just show me the table and I'll take a sc
     oneClinicalLoopTitle: "One Clinical Loop, Clear Records",
     linkedToVisit: (department: string, date: string) => `Linked to ${department} visit — ${date}`,
     narrativeWithOncology: (department: string, date: string) =>
-      `The liver biopsy on June 7, 2021 is linked to the pathology result issued on June 10, 2021, and the ${department} visit on ${date}.`,
-    narrativeWithoutOncology: "The liver biopsy on June 7, 2021 is linked to the pathology result issued on June 10, 2021.",
+      `The biopsy procedure is linked to its pathology result, and to the ${department} visit on ${date}.`,
+    narrativeWithoutOncology: "The biopsy procedure is linked to its pathology result below.",
     kicker: "Biopsy and Result",
     detailsTitle: "Linked Loop Details",
     linkedToBiopsy: "Linked to the liver biopsy procedure",
