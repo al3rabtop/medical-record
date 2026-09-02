@@ -332,7 +332,17 @@ export function registerExtractRoute(app: Express) {
         physician: parsed.physician ?? null,
         hospitalVisitNumber: parsed.hospitalVisitNumber ?? null,
         patientIdentifier: parsed.patientIdentifier ?? null,
-        results: Array.isArray(parsed.results) ? parsed.results : [],
+        // A narrative report (radiology/pathology/physician) must never carry
+        // stored results — getMedicalDashboardForUser uses "this visit has at
+        // least one result" as a structural signal to classify it as
+        // laboratory (see classifyMedicalRecord), overriding keyword
+        // matching. If the AI ever populated `results` alongside
+        // reportKind:"narrative" (a combined document, or a slip in the
+        // extraction prompt), that visit would silently disappear from its
+        // real portal (e.g. Radiology) and reappear as a lab result. Forcing
+        // it empty here makes the "narrative reports carry no results"
+        // contract a hard invariant instead of a prompt-only convention.
+        results: isNarrative ? [] : Array.isArray(parsed.results) ? parsed.results : [],
         reportKind: isNarrative ? "narrative" : "labs",
         reportType: parsed.reportType ?? null,
         summaryAr: parsed.summaryAr ?? null,
