@@ -82,15 +82,20 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
   const { t, dir, locale } = useLocale();
   if (!card) return null;
   const interpretationText = t.interpretation[card.interpretation.key];
-  // TEST_INFO's "abbr" (English scientific name) and "about" (Arabic-only
-  // prose) each exist in only one language — shown only in the matching
-  // locale rather than stacking both under one heading. "about" only ever
-  // exists in Arabic in this system, so English mode always uses the
-  // properly-localized default description instead of falling back to it.
+  // "abbr" (English scientific name) is English-only, so it is only shown
+  // in English mode. "about" is a true bilingual pair (about/aboutEn) in
+  // the static dictionary, resolved for the current locale by
+  // getLocalizedTestInfo — but a per-result "about" (AI-generated at
+  // extraction time) only ever exists in Arabic, so it is only trusted in
+  // Arabic mode; English mode always falls through to the dictionary's
+  // English explanation (or the generic placeholder for an uncatalogued test).
   const localizedInfo = getLocalizedTestInfo(card.code, locale);
   const displayLabel = getLocalizedTestName(card.code, locale, card.label);
   const dialogAbbr = card.abbr ?? localizedInfo?.abbr ?? null;
-  const dialogAbout = locale === "ar" ? (card.about ?? localizedInfo?.about ?? t.metricHistory.defaultAbout) : t.metricHistory.defaultAbout;
+  const dialogAbout =
+    locale === "ar"
+      ? (card.about ?? localizedInfo?.about ?? t.metricHistory.defaultAbout)
+      : (localizedInfo?.about ?? t.metricHistory.defaultAbout);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir={dir} className="max-h-[90vh] overflow-y-auto border-slate-200 bg-card p-0 sm:max-w-2xl">

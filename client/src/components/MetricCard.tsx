@@ -40,10 +40,13 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
   const fallback = getLocalizedTestInfo(code, locale);
   const displayLabel = getLocalizedTestName(code, locale, label);
   const testAbbr = abbr ?? fallback?.abbr ?? null;
-  // "about" (per-result or the static dictionary's fallback) only ever
-  // exists in Arabic in this system — shown only in Arabic mode rather
-  // than leaking Arabic prose into an English card.
-  const testAbout = locale === "ar" ? (about ?? fallback?.about ?? null) : null;
+  // A per-result "about" (AI-generated at extraction time) only ever exists
+  // in Arabic in this system, so it is shown only in Arabic mode — never
+  // leaking Arabic prose into an English card. The static dictionary
+  // fallback, however, is a true bilingual pair (about/aboutEn), so in
+  // English mode we fall through to its English explanation instead of
+  // showing nothing.
+  const testAbout = locale === "ar" ? (about ?? fallback?.about ?? null) : (fallback?.about ?? null);
   const interpretationText = t.interpretation[interpretation.key];
   const interpretationStyle = {
     improving: { Icon: CheckCircle2, className: "border-emerald-100 bg-emerald-50 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-200" },

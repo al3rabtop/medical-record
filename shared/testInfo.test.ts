@@ -1,30 +1,44 @@
 import { describe, expect, it } from "vitest";
 import { getLocalizedTestInfo, getLocalizedTestName } from "./testInfo";
 
+const ARABIC_RE = /[؀-ۿ]/;
+
 describe("getLocalizedTestInfo — never mixes Arabic and English in one locale", () => {
-  it("Arabic mode returns Arabic prose (about/why) and never the English fields", () => {
+  it("Arabic mode returns Arabic prose (about/why) and never the English-only fields", () => {
     const info = getLocalizedTestInfo("hemoglobin", "ar");
-    expect(info?.about).not.toBeNull();
+    expect(info?.about).toBe("يقيس قدرة الدم على نقل الأكسجين. انخفاضه يشير إلى فقر الدم.");
     expect(info?.why).not.toBeNull();
     expect(info?.abbr).toBeNull();
     expect(info?.clinical).toBeNull();
   });
 
-  it("English mode returns English fields (abbr/clinical) and never the Arabic prose", () => {
+  it("English mode returns English fields (abbr/clinical/about) and never Arabic prose", () => {
     const info = getLocalizedTestInfo("hemoglobin", "en");
     expect(info?.abbr).toBe("Hemoglobin (Hb)");
     expect(info?.clinical).not.toBeNull();
-    expect(info?.about).toBeNull();
+    expect(info?.about).toBe("A protein in red blood cells that helps carry oxygen throughout the body.");
     expect(info?.why).toBeNull();
   });
 
-  it("a test with no 'why'/'clinical' entry (e.g. rbc) still respects the locale split for the fields it does have", () => {
-    const ar = getLocalizedTestInfo("rbc", "ar");
-    const en = getLocalizedTestInfo("rbc", "en");
-    expect(ar?.about).not.toBeNull();
-    expect(ar?.abbr).toBeNull();
-    expect(en?.abbr).not.toBeNull();
-    expect(en?.about).toBeNull();
+  it("the 'simple explanation' (about) is restored in English mode — this is the explanation-feature regression fix", () => {
+    // Every catalogued test must have a real English explanation, not null
+    // and not the Arabic text leaking through.
+    for (const code of ["hemoglobin", "rbc", "mch", "mchc", "wbc", "creatinine", "tsh"]) {
+      const info = getLocalizedTestInfo(code, "en");
+      expect(info?.about, `${code} should have an English "about"`).toBeTruthy();
+      expect(ARABIC_RE.test(info!.about!), `${code}'s English "about" must not contain Arabic text`).toBe(false);
+    }
+  });
+
+  it("a test that previously had no 'why'/'clinical' entry (rbc, mch, mchc) now has both, in the correct locale", () => {
+    for (const code of ["rbc", "mch", "mchc"]) {
+      const ar = getLocalizedTestInfo(code, "ar");
+      const en = getLocalizedTestInfo(code, "en");
+      expect(ar?.why, `${code} should have an Arabic "why"`).toBeTruthy();
+      expect(en?.clinical, `${code} should have an English "clinical"`).toBeTruthy();
+      expect(ar?.clinical).toBeNull();
+      expect(en?.why).toBeNull();
+    }
   });
 
   it("returns null for an unknown code rather than inventing content", () => {
