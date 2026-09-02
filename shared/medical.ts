@@ -23,7 +23,21 @@ export type TrendInterpretation = {
 export type RecordPortal = "laboratory" | "radiology" | "physician" | "pathology";
 export type RadiologyModality = "CT" | "MRI" | "X-ray" | "Ultrasound" | "Fluoroscopy" | "Image-guided" | "Other";
 
-export function classifyMedicalRecord(reportType: string, summary = "", department = ""): { portal: RecordPortal; modality: RadiologyModality | null } {
+/**
+ * `hasLabResults` — true when this visit has at least one row in
+ * medicalResults. The AI extraction contract (server/_core/extract.ts)
+ * only ever populates structured results for a "labs" reportKind report,
+ * and always leaves them empty for a narrative one (radiology, pathology,
+ * or physician) — so this is real stored structural data, not a guess
+ * from the report's title text, and it is checked before any keyword
+ * matching. This is what fixes a lab report (e.g. a CBC) whose extracted
+ * title/summary didn't happen to contain a recognised keyword ("تحاليل",
+ * "مختبر", "laboratory") from silently falling through every check below
+ * to the radiology default at the bottom of this function.
+ */
+export function classifyMedicalRecord(reportType: string, summary = "", department = "", hasLabResults = false): { portal: RecordPortal; modality: RadiologyModality | null } {
+  if (hasLabResults) return { portal: "laboratory", modality: null };
+
   const heading = reportType.toLowerCase();
   const text = `${reportType} ${summary} ${department}`.toLowerCase();
 

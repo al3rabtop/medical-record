@@ -178,9 +178,10 @@ export function makeResultCards(
 export async function getMedicalDashboardForUser(userId: number, profileId?: number) {
   const { visits, results } = await getMedicalRecordsForUser(userId, profileId);
   const cards = makeResultCards(results);
+  const visitIdsWithResults = new Set(results.map((r) => r.visitId));
   const classifiedVisits = visits.map((visit) => ({
     ...visit,
-    ...classifyMedicalRecord(visit.reportType, visit.summary ?? "", visit.department ?? ""),
+    ...classifyMedicalRecord(visit.reportType, visit.summary ?? "", visit.department ?? "", visitIdsWithResults.has(visit.id)),
   }));
   const latestVisit = classifiedVisits[0] ?? null;
   const portalCounts = {

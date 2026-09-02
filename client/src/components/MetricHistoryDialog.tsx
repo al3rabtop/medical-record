@@ -36,6 +36,16 @@ type MetricHistoryDialogProps = {
 };
 
 export function MetricHistoryTable({ history, t: dict }: { history: Array<{ value: string; unit: string | null; referenceRange: string | null; facility: string | null; examDate: string; status: MedicalStatus }>; t: Dictionary }) {
+  // `history` arrives oldest-first (ascending exam date) — that order is
+  // relied on elsewhere (MetricTrendChart plots it left-to-right, and
+  // MetricCard's "previous measurements" strip right-aligns assuming the
+  // most recent prior value is last). A history TABLE, however, is read as
+  // a chronological list and must show the newest record first, so it is
+  // reversed only for this rendering — the underlying data/order is
+  // untouched. The newest item is therefore always index 0 here, which is
+  // what actually determines the "latest" badge — never array position in
+  // the original array, upload order, or locale.
+  const displayHistory = [...history].reverse();
   return (
     <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-start text-sm">
@@ -51,15 +61,15 @@ export function MetricHistoryTable({ history, t: dict }: { history: Array<{ valu
           </tr>
         </thead>
         <tbody>
-          {history.map((item, index) => (
+          {displayHistory.map((item, index) => (
             <tr
               key={`${item.examDate}-${index}`}
-              className={index === history.length - 1 ? "bg-teal-50/60 dark:bg-teal-950/30" : "border-t border-slate-100"}
+              className={index === 0 ? "bg-teal-50/60 dark:bg-teal-950/30" : "border-t border-slate-100"}
             >
               <td className="whitespace-nowrap px-4 py-3 font-bold text-slate-700">{item.examDate}</td>
               <td className="whitespace-nowrap px-4 py-3 font-extrabold text-slate-950">
                 {item.value} <span className="text-xs font-semibold text-slate-500">{item.unit ?? "—"}</span>
-                {index === history.length - 1 && (
+                {index === 0 && (
                   <span className="mr-2 rounded-full bg-teal-800 px-2 py-0.5 text-[10px] text-white">{dict.metricHistory.latestBadge}</span>
                 )}
               </td>
@@ -106,7 +116,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
           </div>
         </DialogHeader>
         <div className="space-y-5 px-6 py-6 sm:px-8">
-          <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-teal-800 p-4 text-white"><p className="text-xs font-bold text-teal-100">{t.metricCard.latestResult}</p><p className="mt-1 text-3xl font-extrabold">{card.value}<span className="mr-1 text-xs text-teal-100">{card.unit ?? ""}</span></p><p className="mt-2 text-[11px] text-teal-100">{card.examDate}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">{t.table.referenceRange}</p><p className="mt-2 font-extrabold text-slate-900">{card.referenceRange ?? t.common.notMentioned}</p></div><div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">{t.metricHistory.measurementCount}</p><p className="mt-2 flex items-center gap-2 text-xl font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />{card.history.length}</p></div></div>
+          <div className="grid gap-3 sm:grid-cols-3"><div className="min-w-0 break-words rounded-xl bg-teal-800 p-4 text-white"><p className="text-xs font-bold text-teal-100">{t.metricCard.latestResult}</p><p className="mt-1 text-3xl font-extrabold">{card.value}<span className="mr-1 text-xs text-teal-100">{card.unit ?? ""}</span></p><p className="mt-2 text-[11px] text-teal-100">{card.examDate}</p></div><div className="min-w-0 break-words rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">{t.table.referenceRange}</p><p className="mt-2 font-extrabold text-slate-900">{card.referenceRange ?? t.common.notMentioned}</p></div><div className="min-w-0 break-words rounded-xl bg-white p-4 shadow-sm"><p className="text-xs font-bold text-slate-500">{t.metricHistory.measurementCount}</p><p className="mt-2 flex items-center gap-2 text-xl font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />{card.history.length}</p></div></div>
           <div className="flex flex-wrap gap-2"><ViewOriginalReport visitIds={Array.from(new Set(card.history.map((item) => item.visitId)))} /></div>
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4 dark:border-teal-900/50 dark:bg-teal-950/30"><div className="flex gap-2"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-teal-800 dark:text-teal-300" /><div><p className="text-sm font-extrabold text-teal-950 dark:text-teal-100">{interpretationText.label}</p><p className="mt-1 text-sm leading-6 text-teal-900/80 dark:text-teal-200/80">{interpretationText.detail}</p></div></div></div>
           {(card.hasUnitMismatch || card.hasRangeMismatch) && (

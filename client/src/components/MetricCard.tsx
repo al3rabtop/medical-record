@@ -67,7 +67,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
       </div>
       {testAbout && <p className="mt-2.5 text-xs leading-5 text-slate-500">{testAbout}</p>}
       <div className="mt-5 flex items-end justify-between gap-3">
-        <div>
+        <div className="min-w-0 break-words">
           <p className="text-[11px] font-bold text-slate-500">{t.metricCard.latestResult}</p>
           <p className="metric-value mt-1 text-3xl font-extrabold tracking-tight text-slate-950">
             {value}<span className="mr-1.5 text-sm font-semibold text-slate-500">{unit ?? ""}</span>
@@ -82,7 +82,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
             if (diff === 0) return <p className="mt-1.5 text-xs text-slate-500">{t.metricCard.unchangedFromPrevious}</p>;
             const rounded = Math.round(Math.abs(diff) * 100) / 100;
             return (
-              <p className="mt-1.5 flex items-center gap-1.5 text-xs">
+              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-slate-500">{t.metricCard.previous}</span>
                 <span className="text-slate-500 line-through" dir="ltr">{prev.value}</span>
                 <span className="font-bold text-slate-700" dir="ltr">{diff > 0 ? "↑" : "↓"} {rounded}</span>
@@ -142,7 +142,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
 
       <div className={`mt-4 flex gap-2.5 rounded-xl border px-3 py-2.5 ${interpretationStyle.className}`}>
         <InterpretationIcon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        <div><p className="text-xs font-extrabold">{interpretationText.label}</p><p className="mt-0.5 text-[11px] leading-5 opacity-80">{interpretationText.detail}</p></div>
+        <div className="min-w-0 break-words"><p className="text-xs font-extrabold">{interpretationText.label}</p><p className="mt-0.5 text-[11px] leading-5 opacity-80">{interpretationText.detail}</p></div>
       </div>
       <div className="mt-4 flex items-center gap-1 text-xs font-extrabold text-teal-800">{t.metricCard.clickToViewAll} <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" aria-hidden="true" /></div>
     </article>
