@@ -1,6 +1,6 @@
 import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { type MedicalStatus } from "@shared/medical";
-import { getTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo } from "@shared/testInfo";
 import { ChevronLeft } from "lucide-react";
 import { useLocale } from "@/contexts/LocaleContext";
 
@@ -24,7 +24,7 @@ export function MetricListView({
   cards: Row[];
   onOpen: (code: string) => void;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   return (
     <div className="overflow-hidden rounded-[1.45rem] border border-slate-200 bg-white">
       <div className="overflow-x-auto">
@@ -41,7 +41,7 @@ export function MetricListView({
           </thead>
           <tbody>
             {cards.map((card, i) => {
-              const abbr = card.abbr ?? getTestInfo(card.code)?.abbr ?? null;
+              const abbr = card.abbr ?? getLocalizedTestInfo(card.code, locale)?.abbr ?? null;
               return (
                 <tr
                   key={card.code}

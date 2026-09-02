@@ -3,7 +3,7 @@ import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { type MedicalStatus, type TrendInterpretationKey } from "@shared/medical";
 import { BarChart3, BookOpen, CalendarDays, CircleAlert, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo } from "@shared/testInfo";
 import { MetricTrendChart } from "@/components/MetricTrendChart";
 import { FollowUpReminder } from "@/components/FollowUpReminder";
 import { ViewOriginalReport } from "@/components/ViewOriginalReport";
@@ -79,15 +79,23 @@ export function MetricHistoryTable({ history, t: dict }: { history: Array<{ valu
 }
 
 export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryDialogProps) {
-  const { t, dir } = useLocale();
+  const { t, dir, locale } = useLocale();
   if (!card) return null;
   const interpretationText = t.interpretation[card.interpretation.key];
+  // TEST_INFO's "abbr" (English scientific name) and "about" (Arabic-only
+  // prose) each exist in only one language — shown only in the matching
+  // locale rather than stacking both under one heading. "about" only ever
+  // exists in Arabic in this system, so English mode always uses the
+  // properly-localized default description instead of falling back to it.
+  const localizedInfo = getLocalizedTestInfo(card.code, locale);
+  const dialogAbbr = card.abbr ?? localizedInfo?.abbr ?? null;
+  const dialogAbout = locale === "ar" ? (card.about ?? localizedInfo?.about ?? t.metricHistory.defaultAbout) : t.metricHistory.defaultAbout;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir={dir} className="max-h-[90vh] overflow-y-auto border-slate-200 bg-card p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-slate-200 bg-white px-6 py-6 text-right sm:px-8">
           <div className="flex items-start justify-between gap-4 pl-8">
-            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{card.label}</DialogTitle>{(card.abbr ?? getTestInfo(card.code)?.abbr) && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{card.abbr ?? getTestInfo(card.code)!.abbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{card.about ?? getTestInfo(card.code)?.about ?? t.metricHistory.defaultAbout}</DialogDescription></div>
+            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{card.label}</DialogTitle>{dialogAbbr && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{dialogAbbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{dialogAbout}</DialogDescription></div>
             <MedicalStatusBadge status={card.status} />
           </div>
         </DialogHeader>
@@ -120,26 +128,29 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
             </div>
           )}<FollowUpReminder resultId={card.resultId} followUpDate={card.followUpDate ?? null} /><div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><BarChart3 className="h-4 w-4 text-teal-700" />{t.metricHistory.trendOverTime}</h3><div className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><MetricTrendChart history={card.history} referenceRange={card.referenceRange} status={card.status} /></div></div><div><h3 className="flex items-center gap-2 text-base font-extrabold text-slate-900"><CalendarDays className="h-4 w-4 text-teal-700" />{t.metricHistory.allRecordedResults}</h3><MetricHistoryTable history={card.history} t={t} /></div>
           {(() => {
-            const info = getTestInfo(card.code);
-            if (!info?.why && !info?.clinical) return null;
+            // "why" (Arabic, patient-friendly framing) and "clinical" (English,
+            // physician-oriented framing) are two different pieces of content,
+            // each written in only one language — never both languages for the
+            // same locale, so only the one matching the active locale renders.
+            if (!localizedInfo?.why && !localizedInfo?.clinical) return null;
             return (
               <div className="border-t border-slate-200 pt-5">
-                {info.why && (
+                {localizedInfo.why && (
                   <div className="rounded-xl bg-slate-50 p-4">
                     <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
                       <BookOpen className="h-4 w-4 text-teal-700" />
                       {t.metricHistory.whyOrdered}
                     </h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">{info.why}</p>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{localizedInfo.why}</p>
                   </div>
                 )}
-                {info.clinical && (
+                {localizedInfo.clinical && (
                   <div className="mt-3 rounded-xl border border-slate-200 p-4">
                     <h3 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
                       <Stethoscope className="h-4 w-4 text-teal-700" />
                       {t.metricHistory.clinicalNote}
                     </h3>
-                    <p className="mt-2 text-xs leading-5 text-slate-600" dir="ltr">{info.clinical}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600" dir="ltr">{localizedInfo.clinical}</p>
                   </div>
                 )}
                 <p className="mt-3 text-[11px] leading-5 text-slate-400">

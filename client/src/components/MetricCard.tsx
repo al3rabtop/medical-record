@@ -3,7 +3,7 @@ import { type MedicalStatus, type Trend } from "@shared/medical";
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, Minus } from "lucide-react";
 import { CheckCircle2, CircleAlert, Info } from "lucide-react";
 import { type TrendInterpretation } from "@shared/medical";
-import { getTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo } from "@shared/testInfo";
 import { MetricTrendChart } from "@/components/MetricTrendChart";
 import { useLocale } from "@/contexts/LocaleContext";
 
@@ -34,12 +34,15 @@ const trendStyle: Record<Trend, { Icon: typeof ArrowUpRight; className: string }
 };
 
 export function MetricCard({ code, abbr, about, label, category, value, unit, referenceRange, trend, status, examDate, lastFive, history, interpretation, onOpenHistory }: MetricCardProps) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const trendLabels: Record<Trend, string> = { ارتفع: t.trend.up, انخفض: t.trend.down, مستقر: t.trend.stable, "بيانات غير متوفرة": t.trend.unavailable };
   const { Icon, className } = trendStyle[trend];
-  const fallback = getTestInfo(code);
+  const fallback = getLocalizedTestInfo(code, locale);
   const testAbbr = abbr ?? fallback?.abbr ?? null;
-  const testAbout = about ?? fallback?.about ?? null;
+  // "about" (per-result or the static dictionary's fallback) only ever
+  // exists in Arabic in this system — shown only in Arabic mode rather
+  // than leaking Arabic prose into an English card.
+  const testAbout = locale === "ar" ? (about ?? fallback?.about ?? null) : null;
   const interpretationText = t.interpretation[interpretation.key];
   const interpretationStyle = {
     improving: { Icon: CheckCircle2, className: "border-emerald-100 bg-emerald-50 text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-200" },

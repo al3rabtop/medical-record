@@ -55,6 +55,8 @@ export const ar: Dictionary = {
     notMentionedInReport: "غير مذكورة في التقرير",
     value: "القيمة",
     category: "التصنيف",
+    /** Separator for joining a list of test names into one line (e.g. "Hemoglobin، WBC، Platelets"). */
+    listSeparator: "، ",
   },
   state: {
     preparingRecord: "يجري إعداد السجل…",

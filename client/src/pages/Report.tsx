@@ -1,6 +1,6 @@
 import { PortalError, PortalLoading } from "@/components/PortalState";
 import { trpc } from "@/lib/trpc";
-import { getTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo } from "@shared/testInfo";
 import { ArrowRight, Printer } from "lucide-react";
 import { useLocation } from "wouter";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -92,7 +92,7 @@ export default function Report() {
           </thead>
           <tbody>
             {cards.map((card, i) => {
-              const abbr = card.abbr ?? getTestInfo(card.code)?.abbr ?? null;
+              const abbr = card.abbr ?? getLocalizedTestInfo(card.code, locale)?.abbr ?? null;
               const last5 = card.history.slice(-5);
               const pad = Array(Math.max(0, 5 - last5.length)).fill(null);
               return (

@@ -87,3 +87,29 @@ export const TEST_INFO: Record<string, TestInfo> = {
 export function getTestInfo(code: string): TestInfo | null {
   return TEST_INFO[code] ?? null;
 }
+
+/**
+ * Locale-gated view of this static reference dictionary, for UI display.
+ * Every field here is written in only ONE language — `abbr` (the English
+ * scientific name/abbreviation) and `clinical` in English, `about` and
+ * `why` in Arabic — there is no translated counterpart to fall back to.
+ * Showing a field in the UI's other language would silently mix Arabic and
+ * English inside one card/dialog, so each field is returned only when it
+ * matches the requested locale; otherwise it is null rather than falling
+ * back across languages.
+ */
+export function getLocalizedTestInfo(code: string, locale: "ar" | "en"): {
+  abbr: string | null;
+  about: string | null;
+  why: string | null;
+  clinical: string | null;
+} | null {
+  const info = TEST_INFO[code];
+  if (!info) return null;
+  return {
+    abbr: locale === "en" ? info.abbr ?? null : null,
+    about: locale === "ar" ? info.about ?? null : null,
+    why: locale === "ar" ? info.why ?? null : null,
+    clinical: locale === "en" ? info.clinical ?? null : null,
+  };
+}

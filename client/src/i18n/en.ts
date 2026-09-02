@@ -53,6 +53,8 @@ export const en = {
     notMentionedInReport: "Not mentioned in the report",
     value: "Value",
     category: "Category",
+    /** Separator for joining a list of test names into one line (e.g. "Hemoglobin, WBC, Platelets"). */
+    listSeparator: ", ",
   },
   state: {
     preparingRecord: "Preparing your record…",

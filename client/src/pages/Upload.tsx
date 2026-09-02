@@ -386,7 +386,7 @@ export default function Upload() {
                     <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
                       {t.upload.newTestsNotInRecord(dup.newLabels.length)}
                     </p>
-                    <p className="mt-1 text-xs leading-6 text-slate-600">{dup.newLabels.join("، ")}</p>
+                    <p className="mt-1 text-xs leading-6 text-slate-600">{dup.newLabels.join(t.common.listSeparator)}</p>
                   </div>
                 )}
 
