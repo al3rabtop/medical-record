@@ -68,7 +68,11 @@ function App() {
   return (
     <ErrorBoundary>
       <LocaleProvider>
-        <ThemeProvider defaultTheme="light" switchable>
+        {/* Dark mode is temporarily disabled: switchable=false forces Light
+            Mode and ignores any previously saved "dark" preference. The
+            ThemeProvider/CSS variables are left intact so this can be
+            re-enabled later by restoring the `switchable` prop. */}
+        <ThemeProvider defaultTheme="light">
           <TooltipProvider>
             <Toaster />
             <ProfileProvider>

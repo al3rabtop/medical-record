@@ -31,15 +31,20 @@ export function LocaleThemeSwitcher({ className = "" }: { className?: string }) 
           {t.locale.en}
         </button>
       </div>
-      <button
-        type="button"
-        onClick={toggleTheme}
-        aria-label={theme === "dark" ? t.theme.light : t.theme.dark}
-        title={theme === "dark" ? t.theme.light : t.theme.dark}
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
-      >
-        {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </button>
+      {/* Dark mode is temporarily disabled (see App.tsx) — toggleTheme is
+          undefined in that state, so the switcher hides itself rather than
+          rendering a button with no effect. */}
+      {toggleTheme && (
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? t.theme.light : t.theme.dark}
+          title={theme === "dark" ? t.theme.light : t.theme.dark}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      )}
     </div>
   );
 }

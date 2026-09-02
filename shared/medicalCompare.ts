@@ -86,7 +86,7 @@ export function compareResults(existing: ExistingResult[], incoming: IncomingRes
   const identicalLabels: string[] = [];
 
   for (const r of incoming) {
-    const code = resolveTestCode(r.label, r.abbr ?? null);
+    const code = resolveTestCode(r.label, r.abbr ?? null, r.unit ?? null);
     const prior = byCode.get(code);
 
     if (!prior) {

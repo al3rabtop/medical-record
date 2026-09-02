@@ -111,4 +111,19 @@ describe("compareResults — Case A/B/C/D from the smart-update spec", () => {
     expect(result.newTests).toEqual([{ label: "EOS#", value: "0.2", unit: null }]);
     expect(result.changedTests).toHaveLength(0);
   });
+
+  it("does not confuse a differential percent reading with its absolute-count sibling when only the unit carries the marker", () => {
+    // Same regression as above, but for the more common real-world table
+    // shape: one row labeled plainly "Eosinophils", with the percent and
+    // absolute-count numbers in separate columns that share the same label
+    // text — the "%" vs "10^3/uL" unit is the ONLY signal distinguishing
+    // them. Without unit-aware qualification, this incoming "0.2" (absolute
+    // count) would resolve to the SAME code as the prior percent reading and
+    // be reported as "eosinophils changed from 4.8 to 0.2" instead of a
+    // genuinely new, separate measurement.
+    const priorEos = [{ code: "eosinophils_percent", label: "Eosinophils", valueText: "4.8" }];
+    const result = compareResults(priorEos, [{ label: "Eosinophils", value: "0.2", unit: "10^3/uL" }]);
+    expect(result.newTests).toEqual([{ label: "Eosinophils", value: "0.2", unit: "10^3/uL" }]);
+    expect(result.changedTests).toHaveLength(0);
+  });
 });

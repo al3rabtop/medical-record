@@ -44,6 +44,7 @@ export function registerCanonicalizeRoute(app: Express) {
         code: medicalResults.code,
         label: medicalResults.label,
         abbr: medicalResults.abbr,
+        unit: medicalResults.unit,
         visitId: medicalResults.visitId,
       })
       .from(medicalResults);
@@ -55,7 +56,7 @@ export function registerCanonicalizeRoute(app: Express) {
     const abbrConflicts: Array<{ id: number; visitId: number; label: string; abbr: string | null; usedCode: string; abbrSuggested: string }> = [];
 
     for (const row of rows) {
-      const { code: canonical, matched, conflict } = resolveTestCodeDetailed(row.label, row.abbr);
+      const { code: canonical, matched, conflict } = resolveTestCodeDetailed(row.label, row.abbr, row.unit);
       if (conflict) {
         abbrConflicts.push({
           id: row.id,

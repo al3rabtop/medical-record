@@ -141,6 +141,7 @@ export const appRouter = router({
                 referenceRange: z.string().nullable(),
                 abbr: z.string().nullable().optional(),
                 about: z.string().nullable().optional(),
+                confidence: z.enum(["high", "low"]).nullable().optional(),
               })
             ),
           reportType: z.string().nullable().optional(),
@@ -226,6 +227,7 @@ export const appRouter = router({
               referenceRange: z.string().nullable(),
               abbr: z.string().nullable().optional(),
               about: z.string().nullable().optional(),
+              confidence: z.enum(["high", "low"]).nullable().optional(),
             })
           ),
           hospitalVisitNumber: z.string().nullable().optional(),

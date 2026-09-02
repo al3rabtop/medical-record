@@ -112,6 +112,13 @@ export const medicalResults = mysqlTable("medicalResults", {
   followUpDate: varchar("followUpDate", { length: 10 }),
   /** One-line plain-Arabic explanation of what this test measures. */
   about: varchar("about", { length: 400 }),
+  /**
+   * The AI extraction's own self-reported confidence for this value, kept
+   * for provenance so a later investigation into a suspicious value can see
+   * whether the model already flagged it as unclear at extraction time.
+   * Null for results entered manually or saved before this column existed.
+   */
+  confidence: mysqlEnum("confidence", ["high", "low"]),
   status: mysqlEnum("status", ["reassuring", "follow_up", "unavailable"]).notNull().default("unavailable"),
   note: text("note"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

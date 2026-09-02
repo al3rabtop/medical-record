@@ -339,6 +339,16 @@ async function main() {
     }
   }
 
+  // --- medicalResults.confidence: provenance for the AI's own self-reported
+  // confidence at extraction time, previously computed but discarded before
+  // ever reaching the database.
+  if (await tableExists(conn, "medicalResults")) {
+    if (!(await columnExists(conn, "medicalResults", "confidence"))) {
+      console.log("[migrate] Adding medicalResults.confidence...");
+      await conn.query(`ALTER TABLE medicalResults ADD COLUMN confidence ENUM('high','low') NULL`);
+    }
+  }
+
   console.log("[migrate] Done.");
   await conn.end();
 }

@@ -233,6 +233,7 @@ export default function Upload() {
         referenceRange: r.referenceRange?.trim() || null,
         abbr: r.abbr,
         about: r.about,
+        confidence: r.confidence,
       })),
     });
   }
@@ -250,6 +251,7 @@ export default function Upload() {
         referenceRange: r.referenceRange?.trim() || null,
         abbr: r.abbr,
         about: r.about,
+        confidence: r.confidence,
       }));
   }
 

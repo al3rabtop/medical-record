@@ -182,13 +182,15 @@ export type TestCodeResolution = {
  * reliable signal than the abbreviation: it is longer and more redundant,
  * whereas a three-letter abbreviation is exactly the kind of token an
  * OCR/extraction step silently swaps. The abbreviation is only used when
- * the label alone doesn't resolve.
+ * the label alone doesn't resolve. `unit` is optional and only ever used to
+ * disambiguate a differential count's percent/absolute sibling (see
+ * applyCountQualifier) — it never changes which BASE test a label resolves to.
  */
-export function resolveTestCodeDetailed(label: string, abbr?: string | null): TestCodeResolution {
+export function resolveTestCodeDetailed(label: string, abbr?: string | null, unit?: string | null): TestCodeResolution {
   const rawFromLabel = resolveFromLabel(label);
   const rawFromAbbr = abbr ? resolveFromAbbr(abbr) : null;
-  const fromLabel = rawFromLabel ? applyCountQualifier(label, rawFromLabel) : null;
-  const fromAbbr = rawFromAbbr && abbr ? applyCountQualifier(abbr, rawFromAbbr) : null;
+  const fromLabel = rawFromLabel ? applyCountQualifier(label, unit, rawFromLabel) : null;
+  const fromAbbr = rawFromAbbr && abbr ? applyCountQualifier(abbr, unit, rawFromAbbr) : null;
 
   if (fromLabel && fromAbbr && fromLabel !== fromAbbr) {
     // Trust the label, but surface the disagreement.
@@ -212,11 +214,34 @@ export function resolveTestCodeDetailed(label: string, abbr?: string | null): Te
 const ABSOLUTE_COUNT_QUALIFIER = /#|\babsolute\b|\babs\b|مطلق/i;
 const PERCENT_QUALIFIER = /%|\bpercent(age)?\b/i;
 
-function applyCountQualifier(rawText: string, code: string): string {
-  if (ABSOLUTE_COUNT_QUALIFIER.test(rawText) && ALIAS_GROUPS[`${code}_absolute`]) {
+/**
+ * Many lab reports print a differential count as ONE row with two number
+ * columns (e.g. "Eosinophils | 4.8 | 0.2") where the row's own label is
+ * just the bare test name — the %/absolute distinction lives only in the
+ * unit column ("%" vs "10^3/uL"/"x10^9/L"/"/uL"/"cells/uL" etc.), never in
+ * the label text itself. Relying on label/abbr text alone (as
+ * ABSOLUTE_COUNT_QUALIFIER/PERCENT_QUALIFIER do above) then resolves BOTH
+ * numbers to the same bare code, so whichever one lands in the database
+ * depends on extraction order — a later upload can silently overwrite a
+ * percentage with an unrelated absolute count (or vice versa), showing up
+ * as a false "value changed" between two visits when neither number
+ * actually changed. This checks the reported unit as a second signal.
+ */
+const ABSOLUTE_COUNT_UNIT = /10\s*\^?\s*[39]\s*\/|\/\s*[uµ]l\b|\/\s*mm\s*3\b|\bcumm\b|\bk\/[uµ]l\b|\bcells?\/[uµ]l\b/i;
+const PERCENT_UNIT = /%/;
+
+function applyCountQualifier(rawText: string, unit: string | null | undefined, code: string): string {
+  const unitText = unit ?? "";
+  if (
+    (ABSOLUTE_COUNT_QUALIFIER.test(rawText) || ABSOLUTE_COUNT_UNIT.test(unitText)) &&
+    ALIAS_GROUPS[`${code}_absolute`]
+  ) {
     return `${code}_absolute`;
   }
-  if (PERCENT_QUALIFIER.test(rawText) && ALIAS_GROUPS[`${code}_percent`]) {
+  if (
+    (PERCENT_QUALIFIER.test(rawText) || PERCENT_UNIT.test(unitText)) &&
+    ALIAS_GROUPS[`${code}_percent`]
+  ) {
     return `${code}_percent`;
   }
   return code;
@@ -291,6 +316,6 @@ function fallbackSlug(label: string): string {
 }
 
 /** Convenience wrapper for callers that only need the code. */
-export function resolveTestCode(label: string, abbr?: string | null): string {
-  return resolveTestCodeDetailed(label, abbr).code;
+export function resolveTestCode(label: string, abbr?: string | null, unit?: string | null): string {
+  return resolveTestCodeDetailed(label, abbr, unit).code;
 }

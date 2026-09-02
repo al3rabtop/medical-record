@@ -264,6 +264,8 @@ export type ReviewedResult = {
   referenceRange: string | null;
   abbr?: string | null;
   about?: string | null;
+  /** The AI extraction's own confidence for this value; null/absent for manually-entered results. */
+  confidence?: "high" | "low" | null;
 };
 
 /** Saves a user-reviewed report as a visit plus its results. */
@@ -319,7 +321,7 @@ export async function saveReviewedReport(
   // how history/trend grouping works).
   const usedCodes = new Set<string>();
   const rows = withStatus.map(r => {
-    const base = resolveTestCode(r.label, r.abbr);
+    const base = resolveTestCode(r.label, r.abbr, r.unit);
     let code = base;
     let i = 2;
     while (usedCodes.has(code)) code = `${base}_${i++}`;
@@ -336,6 +338,7 @@ export async function saveReviewedReport(
       referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
       abbr: r.abbr ? r.abbr.slice(0, 120) : null,
       about: r.about ? r.about.slice(0, 400) : null,
+      confidence: r.confidence ?? null,
       status: r.status,
     };
   });
@@ -686,7 +689,7 @@ export async function mergeIntoVisit(
 
   for (const r of results) {
     const status = deriveStatus(r.numericValue, r.referenceRange);
-    const code = resolveTestCode(r.label, r.abbr);
+    const code = resolveTestCode(r.label, r.abbr, r.unit);
     const prior = byCode.get(code);
 
     if (prior) {
@@ -698,6 +701,7 @@ export async function mergeIntoVisit(
           numericValue: r.numericValue !== null ? String(r.numericValue) : null,
           unit: r.unit ? r.unit.slice(0, 32) : null,
           referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
+          confidence: r.confidence ?? null,
           status,
         })
         .where(eq(medicalResults.id, prior.id));
@@ -721,6 +725,7 @@ export async function mergeIntoVisit(
       referenceRange: r.referenceRange ? r.referenceRange.slice(0, 80) : null,
       abbr: r.abbr ? r.abbr.slice(0, 120) : null,
       about: r.about ? r.about.slice(0, 400) : null,
+      confidence: r.confidence ?? null,
       status,
     });
     added++;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveTestCodeDetailed } from "./testCanon";
 
-const code = (label: string, abbr?: string | null) =>
-  resolveTestCodeDetailed(label, abbr ?? null).code;
+const code = (label: string, abbr?: string | null, unit?: string | null) =>
+  resolveTestCodeDetailed(label, abbr ?? null, unit ?? null).code;
 
 describe("resolveTestCode — Arabic spelling variants", () => {
   it("treats ج/غ transliteration variants of haemoglobin as the same test", () => {
@@ -71,6 +71,28 @@ describe("resolveTestCode — tests that must never be merged", () => {
     expect(code("NEUT")).toBe("neutrophils");
     expect(code("NEUT%")).toBe("neutrophils_percent");
     expect(code("NEUT#")).toBe("neutrophils_absolute");
+  });
+
+  it("uses the reported unit to disambiguate a bare differential-count label with no %/# marker in the text", () => {
+    // Real-world regression: a report prints one row "Eosinophils" with two
+    // number columns (percent and absolute count), so the label text alone
+    // carries no qualifier — only the unit column distinguishes them. Before
+    // this fix, both resolved to the bare "eosinophils" code, so whichever
+    // number landed in the database depended on extraction order: a later
+    // upload of the SAME differential panel could silently replace a
+    // percentage (e.g. 4.8%) with an absolute count (e.g. 0.2 x10^3/uL),
+    // showing up as a false "value changed from 4.8 to 0.2" even though
+    // neither real-world quantity had changed.
+    expect(code("Eosinophils", null, "%")).toBe("eosinophils_percent");
+    expect(code("Eosinophils", null, "10^3/uL")).toBe("eosinophils_absolute");
+    expect(code("Eosinophils", null, "x10^9/L")).toBe("eosinophils_absolute");
+    expect(code("Eosinophils", null, "cells/uL")).toBe("eosinophils_absolute");
+    expect(code("Eosinophils", null, "K/uL")).toBe("eosinophils_absolute");
+    // No unit at all still resolves to the bare code, unchanged.
+    expect(code("Eosinophils", null, null)).toBe("eosinophils");
+    // A unit that isn't a %/absolute-count marker (e.g. hematocrit's own "%")
+    // must not be redirected for tests with no percent/absolute sibling.
+    expect(code("Hematocrit", null, "%")).toBe("hematocrit");
   });
 
   it("keeps MCH/MCHC separate from plain haemoglobin", () => {
