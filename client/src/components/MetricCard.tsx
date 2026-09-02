@@ -55,7 +55,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
   return (
     <article onClick={onOpenHistory} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenHistory(); } }} role="button" tabIndex={0} aria-label={t.metricCard.viewFullRecord(displayLabel)} className="metric-card group cursor-pointer rounded-[1.35rem] border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_-26px_rgba(15,71,63,0.55)] transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_18px_38px_-24px_rgba(15,71,63,0.45)] focus-visible:ring-2 focus-visible:ring-teal-700">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0 break-words">
           <p className="text-xs font-bold text-teal-800">{t.categoryLabels[category] ?? category}</p>
           <h3 className="mt-1 text-base font-bold text-slate-900">{displayLabel}</h3>
           {testAbbr && <p className="mt-0.5 text-[11px] font-semibold text-slate-500" dir="ltr">{testAbbr}</p>}

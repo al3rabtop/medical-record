@@ -96,7 +96,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
       <DialogContent dir={dir} className="max-h-[90vh] overflow-y-auto border-slate-200 bg-card p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-slate-200 bg-white px-6 py-6 text-right sm:px-8">
           <div className="flex items-start justify-between gap-4 pl-8">
-            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{displayLabel}</DialogTitle>{dialogAbbr && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{dialogAbbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{dialogAbout}</DialogDescription></div>
+            <div className="min-w-0 break-words"><p className="text-xs font-extrabold text-teal-700">{t.categoryLabels[card.category] ?? card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{displayLabel}</DialogTitle>{dialogAbbr && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{dialogAbbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{dialogAbout}</DialogDescription></div>
             <MedicalStatusBadge status={card.status} />
           </div>
         </DialogHeader>
