@@ -86,7 +86,14 @@
   --color-slate-100: oklch(20.8% 0.042 265.755);
   --color-slate-200: oklch(27.9% 0.041 260.031);
   --color-slate-300: oklch(37.2% 0.044 257.287);
-  --color-slate-400: oklch(44.6% 0.043 257.281);
+  /* Real usage in this app is exclusively as text/icon color (no
+     bg-slate-400 or border-slate-400 anywhere), for genuinely-readable
+     secondary content — measurement counts, abbreviations, footnotes.
+     A literal role-swap with slate-600 (44.6%) reads at roughly 2.5:1
+     against the dark page background, well under WCAG AA for text this
+     small, so it is bumped to Tailwind real slate-500 lightness instead
+     for legible-but-still-muted contrast. */
+  --color-slate-400: oklch(55.4% 0.046 257.417);
   --color-slate-500: oklch(60% 0.046 257.417);
   --color-slate-600: oklch(70.4% 0.04 256.788);
   --color-slate-700: oklch(86.9% 0.022 252.894);
@@ -112,6 +119,7 @@
 @layer components {
   .container { width: 100%; margin-inline: auto; padding-inline: 1rem; }
   .section-kicker { color: #0f766e; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.08em; }
+  .dark .section-kicker { color: #5eead4; }
   .section-title { margin-top: 0.35rem; color: var(--color-slate-900, #0f172a); font-family: "Noto Naskh Arabic", serif; font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 700; line-height: 1.1; }
   html[dir="ltr"] .section-title { font-family: Georgia, "Times New Roman", serif; }
   .medical-hero::before { content: ""; position: absolute; inset: 0; opacity: 0.26; background-image: linear-gradient(120deg, transparent 0 48%, rgba(255,255,255,0.12) 48% 49%, transparent 49% 100%); background-size: 33px 33px; }
