@@ -339,6 +339,57 @@ async function main() {
     }
   }
 
+  // --- medicalDocuments.userId + a unique (userId, contentHash) index: the
+  // database-level backstop against the exact-duplicate race condition (two
+  // near-simultaneous uploads of the same file both passing the app-level
+  // hash check before either commits). Denormalized from medicalVisits.userId
+  // because MySQL cannot express a unique constraint across a join.
+  if (await tableExists(conn, "medicalDocuments")) {
+    if (!(await columnExists(conn, "medicalDocuments", "userId"))) {
+      console.log("[migrate] Adding medicalDocuments.userId...");
+      await conn.query(`ALTER TABLE medicalDocuments ADD COLUMN userId INT NULL`);
+    }
+
+    const [unbackfilled] = await conn.query(
+      `SELECT COUNT(*) AS c FROM medicalDocuments d
+       JOIN medicalVisits v ON v.id = d.visitId
+       WHERE d.userId IS NULL AND v.userId IS NOT NULL`
+    );
+    if ((unbackfilled as any)[0].c > 0) {
+      console.log(`[migrate] Backfilling userId on ${(unbackfilled as any)[0].c} medicalDocuments row(s) from their visit...`);
+      await conn.query(
+        `UPDATE medicalDocuments d
+         JOIN medicalVisits v ON v.id = d.visitId
+         SET d.userId = v.userId
+         WHERE d.userId IS NULL AND v.userId IS NOT NULL`
+      );
+    }
+
+    if (!(await indexExists(conn, "medicalDocuments", "medicalDocuments_user_hash_idx"))) {
+      try {
+        console.log("[migrate] Adding unique index medicalDocuments_user_hash_idx (userId, contentHash)...");
+        await conn.query(
+          `ALTER TABLE medicalDocuments ADD UNIQUE INDEX medicalDocuments_user_hash_idx (userId, contentHash)`
+        );
+      } catch (err) {
+        // A duplicate (userId, contentHash) pair already existing in the
+        // table (exactly the historical bug this migration exists to
+        // prevent going forward) makes this ALTER fail. Do not let that
+        // block the rest of the deploy, and do not delete anything on the
+        // application's own judgment — surface it loudly so the existing
+        // duplicate rows can be reviewed and cleaned up deliberately
+        // (see scripts/find-duplicate-documents.ts), then this index can be
+        // added by re-running this script.
+        console.error(
+          "[migrate] Could not add medicalDocuments_user_hash_idx — duplicate (userId, contentHash) rows likely already exist. " +
+          "Run scripts/find-duplicate-documents.ts to review them, resolve manually, then re-run this migration. " +
+          "Continuing without the constraint for now:",
+          err
+        );
+      }
+    }
+  }
+
   // --- medicalResults.confidence: provenance for the AI's own self-reported
   // confidence at extraction time, previously computed but discarded before
   // ever reaching the database.

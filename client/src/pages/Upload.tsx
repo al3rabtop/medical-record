@@ -76,11 +76,20 @@ export default function Upload() {
   // even if this review session started before a duplicate existed.
   const [contentHash, setContentHash] = useState<string | null>(null);
   // Kept in memory only to store a compressed copy alongside the visit once
-  // it's saved — never re-sent to the AI, and dropped as soon as saving is done.
+  // it's saved — never re-sent to the AI, and dropped once storing succeeds
+  // (or the user explicitly chooses to move on without it).
   const [pendingFile, setPendingFile] = useState<{ base64: string; mediaType: string; name: string } | null>(null);
+  // Set when storeOriginalDocument exhausts its retries after the visit/
+  // results were already saved successfully — surfaced as a persistent
+  // banner (not a toast that can be missed) because a visit with no stored
+  // document has no contentHash recorded, so a later re-upload of this exact
+  // file would not be recognized as a duplicate and would run through AI
+  // extraction again. See server/documents.ts findDocumentByHash.
+  const [documentStoreFailed, setDocumentStoreFailed] = useState<number | null>(null);
+  const [retryingDocument, setRetryingDocument] = useState(false);
 
-  async function storeOriginalDocument(visitId: number) {
-    if (!pendingFile) return;
+  async function storeOriginalDocument(visitId: number, attempt = 1): Promise<boolean> {
+    if (!pendingFile) return true; // nothing to store is not a failure
     try {
       const res = await fetch("/api/reports/document", {
         method: "POST",
@@ -92,31 +101,56 @@ export default function Upload() {
           originalName: pendingFile.name,
         }),
       });
-      if (!res.ok) {
+      if (res.ok) return true;
+      // A 4xx here (bad/oversized file, unsupported type) won't be fixed by
+      // retrying — only a transient (network/5xx) failure is worth retrying.
+      if (res.status < 500 || attempt >= 3) {
         const data = await res.json().catch(() => ({}));
         toast.error(data.error ?? t.upload.documentSaveError);
+        return false;
       }
     } catch {
-      toast.error(t.upload.documentSaveError);
+      if (attempt >= 3) {
+        toast.error(t.upload.documentSaveError);
+        return false;
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, attempt * 800));
+    return storeOriginalDocument(visitId, attempt + 1);
+  }
+
+  async function finishAfterSave(visitId: number) {
+    const stored = await storeOriginalDocument(visitId);
+    await utils.medical.invalidate();
+    if (stored) {
+      navigate("/labs");
+    } else {
+      // Stay on this page — pendingFile is still in memory here, so the user
+      // can retry attaching it without re-extracting or re-saving results.
+      setDocumentStoreFailed(visitId);
+    }
+  }
+
+  async function retryDocumentStore() {
+    if (documentStoreFailed === null) return;
+    setRetryingDocument(true);
+    const stored = await storeOriginalDocument(documentStoreFailed);
+    setRetryingDocument(false);
+    if (stored) {
+      setDocumentStoreFailed(null);
+      await utils.medical.invalidate();
+      navigate("/labs");
     }
   }
 
   const checkDup = trpc.medical.checkDuplicate.useMutation({ onError: e => setError(e.message) });
   const mergeReport = trpc.medical.mergeReport.useMutation({
-    onSuccess: async (_data, variables) => {
-      await storeOriginalDocument(variables.visitId);
-      await utils.medical.invalidate();
-      navigate("/labs");
-    },
+    onSuccess: (_data, variables) => finishAfterSave(variables.visitId),
     onError: e => setError(e.message),
   });
 
   const saveReport = trpc.medical.saveReport.useMutation({
-    onSuccess: async (data) => {
-      await storeOriginalDocument(data.visitId);
-      await utils.medical.invalidate();
-      navigate("/labs");
-    },
+    onSuccess: (data) => finishAfterSave(data.visitId),
     onError: e => setError(e.message),
   });
 
@@ -284,6 +318,29 @@ export default function Upload() {
           </div>
         )}
 
+        {documentStoreFailed !== null && (
+          <div className="mb-5 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">
+            <p className="text-base font-extrabold text-amber-900 dark:text-amber-200">{t.upload.documentSaveFailedTitle}</p>
+            <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-300">{t.upload.documentSaveFailedBody}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={retryDocumentStore}
+                disabled={retryingDocument}
+                className="flex items-center gap-2 rounded-xl bg-teal-800 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-teal-900 disabled:opacity-60"
+              >
+                {retryingDocument && <Loader2 className="h-4 w-4 animate-spin" />}
+                {t.upload.retryStoringDocument}
+              </button>
+              <button
+                onClick={() => { setDocumentStoreFailed(null); setPendingFile(null); navigate("/labs"); }}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-600"
+              >
+                {t.upload.continueWithoutDocument}
+              </button>
+            </div>
+          </div>
+        )}
+
         {stage === "pick" && (
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
@@ -327,7 +384,7 @@ export default function Upload() {
           </div>
         )}
 
-        {stage === "review" && (
+        {stage === "review" && documentStoreFailed === null && (
           <div className="flex flex-col gap-5">
             {dup && dup.status === "file_duplicate" && (
               <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">

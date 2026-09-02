@@ -137,6 +137,17 @@ export const medicalResults = mysqlTable("medicalResults", {
 export const medicalDocuments = mysqlTable("medicalDocuments", {
   id: int("id").autoincrement().primaryKey(),
   visitId: int("visitId").notNull().references(() => medicalVisits.id, { onDelete: "cascade" }),
+  /**
+   * Denormalized from medicalVisits.userId, purely so a database-level
+   * uniqueness constraint on (userId, contentHash) is possible — MySQL
+   * cannot express a unique constraint across a join. This is what actually
+   * closes the exact-duplicate race condition (two near-simultaneous
+   * uploads of the same file both passing the pre-insert hash check before
+   * either commits): the second INSERT is rejected by the database itself,
+   * not just by an application-level check that can lose the race. Nullable
+   * so pre-existing rows (before this column existed) don't block a migration.
+   */
+  userId: int("userId"),
   originalName: varchar("originalName", { length: 255 }).notNull(),
   /** Object key inside the S3/R2 bucket. */
   storageKey: varchar("storageKey", { length: 512 }).notNull(),
@@ -157,6 +168,10 @@ export const medicalDocuments = mysqlTable("medicalDocuments", {
 }, (table) => [
   index("medicalDocuments_visit_idx").on(table.visitId),
   index("medicalDocuments_contentHash_idx").on(table.contentHash),
+  // MySQL treats every NULL as distinct for uniqueness purposes, so this
+  // never blocks legacy rows with userId/contentHash still NULL — it only
+  // rejects a second non-null (userId, contentHash) pair that already exists.
+  uniqueIndex("medicalDocuments_user_hash_idx").on(table.userId, table.contentHash),
 ]);
 
 export type MedicalVisit = typeof medicalVisits.$inferSelect;

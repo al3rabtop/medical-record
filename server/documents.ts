@@ -132,20 +132,57 @@ export async function storeOriginalDocument(
   // uploaded, not whatever sharp/Ghostscript re-encodes them into.
   const contentHash = hashFileContent(file.buffer);
 
+  // Re-check right before storing: the primary gate is the /api/reports/extract
+  // hash check (before the AI is ever called), but this endpoint can be
+  // reached on its own, and time has passed since that first check — so this
+  // closes most of the window for two near-simultaneous uploads of the same
+  // file to both reach here. It cannot close it completely on its own
+  // (two requests can still both pass this SELECT before either INSERT
+  // commits); the unique (userId, contentHash) index below is the real,
+  // race-proof backstop for that last sliver.
+  const alreadyStored = await findDocumentByHash(userId, contentHash);
+  if (alreadyStored) return { id: alreadyStored.documentId };
+
   const prepared = await prepareForStorage(file.buffer, file.mimeType);
   const key = `medical-documents/${userId}/${visitId}/${nanoid(16)}.${prepared.extension}`;
   await uploadObject(key, prepared.buffer, prepared.mimeType);
 
-  const inserted = await db.insert(medicalDocuments).values({
-    visitId,
-    originalName: file.originalName.slice(0, 255),
-    storageKey: key,
-    mimeType: prepared.mimeType,
-    fileSize: prepared.buffer.length,
-    contentHash,
-  });
+  try {
+    const inserted = await db.insert(medicalDocuments).values({
+      visitId,
+      userId,
+      originalName: file.originalName.slice(0, 255),
+      storageKey: key,
+      mimeType: prepared.mimeType,
+      fileSize: prepared.buffer.length,
+      contentHash,
+    });
 
-  return { id: Number(inserted[0].insertId) };
+    return { id: Number(inserted[0].insertId) };
+  } catch (err) {
+    // Lost the race: another request for the same (userId, contentHash)
+    // committed its INSERT first, and the unique index rejected this one.
+    // The object we just uploaded is now an orphan with nothing pointing to
+    // it — clean it up rather than leaking storage — then hand back the
+    // winning row so the caller still gets a valid document id.
+    const isDuplicateKey =
+      err instanceof Error && "code" in err && (err as { code?: string }).code === "ER_DUP_ENTRY";
+    if (!isDuplicateKey) throw err;
+
+    await deleteObjects([key]).catch(() => {
+      // Best-effort cleanup only — an orphaned object left in storage after
+      // losing a race is a cost, not a correctness problem, and must never
+      // mask the real duplicate resolution below.
+    });
+
+    const winner = await findDocumentByHash(userId, contentHash);
+    if (winner) return { id: winner.documentId };
+    // Extremely unlikely (the row that won the race would have to have been
+    // deleted again in the instant between the failed insert and this
+    // lookup) — but never silently invent a document id for a row that
+    // cannot be found.
+    throw err;
+  }
 }
 
 /**

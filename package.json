@@ -13,7 +13,8 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "tsx scripts/migrate.ts"
+    "db:push": "tsx scripts/migrate.ts",
+    "find-duplicates": "tsx scripts/find-duplicate-documents.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
