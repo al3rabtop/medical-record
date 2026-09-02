@@ -12,6 +12,16 @@ describe("resolveTestCode — Arabic spelling variants", () => {
     expect(code("الهيموغلوبين السكري")).toBe("hba1c");
   });
 
+  it("resolves an English-extracted label and its Arabic-extracted counterpart to the SAME canonical code, never two separate tests", () => {
+    // Guards against the report-language bug creating duplicate results:
+    // a report uploaded while the UI was English and one uploaded while it
+    // was Arabic must land on the same trend card, not fragment into
+    // "Hemoglobin" and "الهيموغلوبين" as if they were different tests.
+    expect(code("Hemoglobin")).toBe(code("الهيموغلوبين"));
+    expect(code("WBC")).toBe(code("كريات الدم البيضاء"));
+    expect(code("Creatinine")).toBe(code("الكرياتينين"));
+  });
+
   it("treats cholesterol and globulin spelling variants as the same test", () => {
     expect(code("الكوليسترول الكلي")).toBe("total_cholesterol");
     expect(code("الكولسترول الكلي")).toBe("total_cholesterol");

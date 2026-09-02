@@ -7,6 +7,7 @@ import { MetricListView } from "@/components/MetricListView";
 import { MetricHistoryDialog } from "@/components/MetricHistoryDialog";
 import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { trpc } from "@/lib/trpc";
+import { getLocalizedTestName } from "@shared/testInfo";
 import { Activity, FlaskConical , LayoutGrid, List , FileDown, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -16,7 +17,7 @@ const ALL_CATEGORIES = "__all__" as const;
 
 export default function Laboratory() {
   const { profileId } = useProfile();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const dashboard = trpc.medical.dashboard.useQuery(profileId ? { profileId } : undefined);
   const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES);
   const [query, setQuery] = useState("");
@@ -40,6 +41,7 @@ export default function Laboratory() {
     const searchOk =
       q === "" ||
       card.label.toLowerCase().includes(q) ||
+      getLocalizedTestName(card.code, locale, card.label).toLowerCase().includes(q) ||
       (card.abbr ?? "").toLowerCase().includes(q);
     return categoryOk && statusOk && searchOk;
   });

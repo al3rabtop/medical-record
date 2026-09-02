@@ -536,6 +536,7 @@ And if you're unable to export a file, just show me the table and I'll take a sc
     confirmDeleteTitle: "Confirm Deletion",
     confirmDeleteBody: "This record and all of its results will be permanently deleted. This cannot be undone.",
     yesDelete: "Yes, Delete",
+    storageCleanupWarning: "The record was deleted, but some of the original files could not be removed from storage. The technical team has been notified.",
   },
 };
 

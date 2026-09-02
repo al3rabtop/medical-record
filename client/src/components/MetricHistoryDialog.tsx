@@ -3,7 +3,7 @@ import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { type MedicalStatus, type TrendInterpretationKey } from "@shared/medical";
 import { BarChart3, BookOpen, CalendarDays, CircleAlert, Stethoscope } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getLocalizedTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo, getLocalizedTestName } from "@shared/testInfo";
 import { MetricTrendChart } from "@/components/MetricTrendChart";
 import { FollowUpReminder } from "@/components/FollowUpReminder";
 import { ViewOriginalReport } from "@/components/ViewOriginalReport";
@@ -88,6 +88,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
   // exists in Arabic in this system, so English mode always uses the
   // properly-localized default description instead of falling back to it.
   const localizedInfo = getLocalizedTestInfo(card.code, locale);
+  const displayLabel = getLocalizedTestName(card.code, locale, card.label);
   const dialogAbbr = card.abbr ?? localizedInfo?.abbr ?? null;
   const dialogAbout = locale === "ar" ? (card.about ?? localizedInfo?.about ?? t.metricHistory.defaultAbout) : t.metricHistory.defaultAbout;
   return (
@@ -95,7 +96,7 @@ export function MetricHistoryDialog({ open, onOpenChange, card }: MetricHistoryD
       <DialogContent dir={dir} className="max-h-[90vh] overflow-y-auto border-slate-200 bg-card p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-slate-200 bg-white px-6 py-6 text-right sm:px-8">
           <div className="flex items-start justify-between gap-4 pl-8">
-            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{card.label}</DialogTitle>{dialogAbbr && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{dialogAbbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{dialogAbout}</DialogDescription></div>
+            <div><p className="text-xs font-extrabold text-teal-700">{card.category} · {t.metricHistory.fullRecord}</p><DialogTitle className="mt-1 text-2xl font-extrabold text-slate-950">{displayLabel}</DialogTitle>{dialogAbbr && <p className="mt-1 text-xs font-semibold text-slate-500" dir="ltr">{dialogAbbr}</p>}<DialogDescription className="mt-2 text-sm leading-6 text-slate-600">{dialogAbout}</DialogDescription></div>
             <MedicalStatusBadge status={card.status} />
           </div>
         </DialogHeader>

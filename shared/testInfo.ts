@@ -1,3 +1,5 @@
+import { getCanonicalArabicName } from "./testCanon";
+
 /**
  * Human-friendly reference for lab tests.
  * - `abbr`: the scientific/English short name a physician would recognise.
@@ -84,10 +86,6 @@ export const TEST_INFO: Record<string, TestInfo> = {
   cea: { abbr: "Carcinoembryonic Antigen (CEA)", about: "مؤشر يُستخدم في متابعة بعض الحالات، ويُقرأ دائماً مع بقية الفحوصات.", why: "يُطلب لمتابعة بعض الحالات الورمية بعد التشخيص، ولا يُستخدم وحده للتشخيص.", clinical: "Ordered for surveillance of certain malignancies after diagnosis; not used alone as a diagnostic test." },
 };
 
-export function getTestInfo(code: string): TestInfo | null {
-  return TEST_INFO[code] ?? null;
-}
-
 /**
  * Locale-gated view of this static reference dictionary, for UI display.
  * Every field here is written in only ONE language — `abbr` (the English
@@ -112,4 +110,32 @@ export function getLocalizedTestInfo(code: string, locale: "ar" | "en"): {
     why: locale === "ar" ? info.why ?? null : null,
     clinical: locale === "en" ? info.clinical ?? null : null,
   };
+}
+
+/**
+ * The medical test's DISPLAY name, resolved from its language-independent
+ * canonical `code` — not from whatever language the report happened to be
+ * extracted in. This is what fixes a card uploaded while the UI was in
+ * English still showing "Hemoglobin" forever after switching to Arabic:
+ * the raw extracted label (`rawLabel`) is stored once and never rewritten,
+ * but every render re-resolves the name for the CURRENT locale from this
+ * function instead of trusting the stored text.
+ *
+ * Fallback hierarchy (never fuzzy-matches, never invents a name):
+ *  1. Canonical name for this code in the requested locale — the Arabic
+ *     alias table's canonical spelling for `"ar"`, this dictionary's
+ *     scientific name (its abbreviation parenthetical stripped) for `"en"`.
+ *  2. `rawLabel` — the name exactly as it was originally extracted/entered,
+ *     used whenever no canonical mapping exists for this code (e.g. a rare
+ *     or not-yet-catalogued test). Preserving the original name here is
+ *     deliberate: it is always safer than guessing a medical identity.
+ */
+export function getLocalizedTestName(code: string, locale: "ar" | "en", rawLabel: string): string {
+  if (locale === "ar") {
+    return getCanonicalArabicName(code) ?? rawLabel;
+  }
+  const info = TEST_INFO[code];
+  if (!info) return rawLabel;
+  const name = info.abbr.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return name || rawLabel;
 }

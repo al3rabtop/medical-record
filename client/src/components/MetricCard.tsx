@@ -3,7 +3,7 @@ import { type MedicalStatus, type Trend } from "@shared/medical";
 import { ArrowDownLeft, ArrowUpRight, ChevronLeft, Minus } from "lucide-react";
 import { CheckCircle2, CircleAlert, Info } from "lucide-react";
 import { type TrendInterpretation } from "@shared/medical";
-import { getLocalizedTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo, getLocalizedTestName } from "@shared/testInfo";
 import { MetricTrendChart } from "@/components/MetricTrendChart";
 import { useLocale } from "@/contexts/LocaleContext";
 
@@ -38,6 +38,7 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
   const trendLabels: Record<Trend, string> = { ارتفع: t.trend.up, انخفض: t.trend.down, مستقر: t.trend.stable, "بيانات غير متوفرة": t.trend.unavailable };
   const { Icon, className } = trendStyle[trend];
   const fallback = getLocalizedTestInfo(code, locale);
+  const displayLabel = getLocalizedTestName(code, locale, label);
   const testAbbr = abbr ?? fallback?.abbr ?? null;
   // "about" (per-result or the static dictionary's fallback) only ever
   // exists in Arabic in this system — shown only in Arabic mode rather
@@ -52,11 +53,11 @@ export function MetricCard({ code, abbr, about, label, category, value, unit, re
   }[interpretation.tone];
   const InterpretationIcon = interpretationStyle.Icon;
   return (
-    <article onClick={onOpenHistory} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenHistory(); } }} role="button" tabIndex={0} aria-label={t.metricCard.viewFullRecord(label)} className="metric-card group cursor-pointer rounded-[1.35rem] border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_-26px_rgba(15,71,63,0.55)] transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_18px_38px_-24px_rgba(15,71,63,0.45)] focus-visible:ring-2 focus-visible:ring-teal-700">
+    <article onClick={onOpenHistory} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpenHistory(); } }} role="button" tabIndex={0} aria-label={t.metricCard.viewFullRecord(displayLabel)} className="metric-card group cursor-pointer rounded-[1.35rem] border border-slate-200/80 bg-white p-5 shadow-[0_10px_35px_-26px_rgba(15,71,63,0.55)] transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_18px_38px_-24px_rgba(15,71,63,0.45)] focus-visible:ring-2 focus-visible:ring-teal-700">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold text-teal-800">{t.categoryLabels[category] ?? category}</p>
-          <h3 className="mt-1 text-base font-bold text-slate-900">{label}</h3>
+          <h3 className="mt-1 text-base font-bold text-slate-900">{displayLabel}</h3>
           {testAbbr && <p className="mt-0.5 text-[11px] font-semibold text-slate-500" dir="ltr">{testAbbr}</p>}
         </div>
         <MedicalStatusBadge status={status} />

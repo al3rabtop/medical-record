@@ -531,5 +531,6 @@ export const ar: Dictionary = {
     confirmDeleteTitle: "تأكيد الحذف",
     confirmDeleteBody: "سيتم حذف هذا السجل وجميع نتائجه نهائياً. لا يمكن التراجع.",
     yesDelete: "نعم، احذف",
+    storageCleanupWarning: "تم حذف السجل، لكن تعذّر حذف بعض الملفات الأصلية من التخزين. تم إبلاغ الفريق التقني.",
   },
 };

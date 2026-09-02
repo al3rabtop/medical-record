@@ -4,7 +4,7 @@ import { getDb } from "./db";
 import { classifyMedicalRecord, deriveTrend, interpretResultTrend, type MedicalStatus, type TrendInterpretation } from "../shared/medical";
 import { resolveTestCode } from "../shared/testCanon";
 import { compareResults, valuesAreEqual } from "../shared/medicalCompare";
-import { findDocumentByHash } from "./documents";
+import { deleteDocumentsForVisits, findDocumentByHash } from "./documents";
 
 export type ResultCard = {
   code: string;
@@ -363,11 +363,15 @@ export async function deleteVisitForUser(userId: number, visitId: number) {
     throw new Error("السجل غير موجود أو لا تملك صلاحية حذفه.");
   }
 
+  // Storage cleanup MUST happen before the visit row is deleted — see
+  // deleteDocumentsForVisits for why the ordering matters.
+  const { failedKeys } = await deleteDocumentsForVisits([visitId]);
+
   // Results are removed explicitly so the delete works regardless of FK cascade setup.
   await db.delete(medicalResults).where(eq(medicalResults.visitId, visitId));
   await db.delete(medicalVisits).where(eq(medicalVisits.id, visitId));
 
-  return { deleted: true, visitId };
+  return { deleted: true, visitId, storageCleanupFailed: failedKeys.length > 0 };
 }
 
 /** Updates values on an existing result, but only within a visit this user owns. */

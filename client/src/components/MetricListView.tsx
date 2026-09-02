@@ -1,6 +1,6 @@
 import { MedicalStatusBadge } from "@/components/MedicalStatusBadge";
 import { type MedicalStatus } from "@shared/medical";
-import { getLocalizedTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo, getLocalizedTestName } from "@shared/testInfo";
 import { ChevronLeft } from "lucide-react";
 import { useLocale } from "@/contexts/LocaleContext";
 
@@ -42,6 +42,7 @@ export function MetricListView({
           <tbody>
             {cards.map((card, i) => {
               const abbr = card.abbr ?? getLocalizedTestInfo(card.code, locale)?.abbr ?? null;
+              const displayLabel = getLocalizedTestName(card.code, locale, card.label);
               return (
                 <tr
                   key={card.code}
@@ -49,7 +50,7 @@ export function MetricListView({
                   className={`cursor-pointer transition hover:bg-teal-50/50 dark:hover:bg-teal-950/30 ${i === 0 ? "" : "border-t border-slate-100"}`}
                 >
                   <td className="px-4 py-3">
-                    <span className="block font-bold text-slate-800">{card.label}</span>
+                    <span className="block font-bold text-slate-800">{displayLabel}</span>
                     {abbr && (
                       <span className="block text-[11px] font-semibold text-slate-400" dir="ltr">
                         {abbr}

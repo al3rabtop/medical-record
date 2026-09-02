@@ -1,6 +1,6 @@
 import { PortalError, PortalLoading } from "@/components/PortalState";
 import { trpc } from "@/lib/trpc";
-import { getLocalizedTestInfo } from "@shared/testInfo";
+import { getLocalizedTestInfo, getLocalizedTestName } from "@shared/testInfo";
 import { ArrowRight, Printer } from "lucide-react";
 import { useLocation } from "wouter";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -93,12 +93,13 @@ export default function Report() {
           <tbody>
             {cards.map((card, i) => {
               const abbr = card.abbr ?? getLocalizedTestInfo(card.code, locale)?.abbr ?? null;
+              const displayLabel = getLocalizedTestName(card.code, locale, card.label);
               const last5 = card.history.slice(-5);
               const pad = Array(Math.max(0, 5 - last5.length)).fill(null);
               return (
                 <tr key={card.code} className={i % 2 ? "bg-slate-50" : ""}>
                   <td className="border-b border-slate-200 px-2 py-1.5">
-                    <span className="block font-bold text-slate-900">{card.label}</span>
+                    <span className="block font-bold text-slate-900">{displayLabel}</span>
                     {abbr && (
                       <span className="block text-[9px] text-slate-500" dir="ltr">{abbr}</span>
                     )}

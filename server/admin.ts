@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { desc, eq, sql } from "drizzle-orm";
 import { medicalResults, medicalVisits, users } from "../drizzle/schema";
 import { getDb } from "./db";
+import { deleteDocumentsForVisits } from "./documents";
 
 /**
  * Account-level statistics only.
@@ -205,11 +206,15 @@ export async function adminDeleteUser(adminUserId: number, targetUserId: number)
     .from(medicalVisits)
     .where(eq(medicalVisits.userId, targetUserId));
 
+  // Storage cleanup MUST happen before the visit rows are deleted — see
+  // deleteDocumentsForVisits for why the ordering matters.
+  const { failedKeys } = await deleteDocumentsForVisits(visits.map((v) => v.id));
+
   for (const visit of visits) {
     await db.delete(medicalResults).where(eq(medicalResults.visitId, visit.id));
   }
   await db.delete(medicalVisits).where(eq(medicalVisits.userId, targetUserId));
   await db.delete(users).where(eq(users.id, targetUserId));
 
-  return { deleted: true, visitsRemoved: visits.length };
+  return { deleted: true, visitsRemoved: visits.length, storageCleanupFailed: failedKeys.length > 0 };
 }

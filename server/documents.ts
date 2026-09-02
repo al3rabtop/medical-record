@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 import sharp from "sharp";
 import { medicalDocuments, medicalVisits } from "../drizzle/schema";
 import { getDb } from "./db";
-import { isStorageConfigured, uploadObject } from "./_core/storage";
+import { deleteObjects, isStorageConfigured, uploadObject } from "./_core/storage";
 import { compressPdf, isDigitallySigned } from "./pdfCompression";
 
 /**
@@ -221,4 +221,61 @@ export async function getOwnedDocument(userId: number, documentId: number) {
     .limit(1);
 
   return rows[0] ?? null;
+}
+
+/**
+ * Deletes every stored R2/S3 object belonging to the given visits, then
+ * removes their medicalDocuments rows. MUST be called before the owning
+ * medicalVisits rows are deleted: medicalDocuments has an ON DELETE CASCADE
+ * foreign key to medicalVisits, so once the visit row is gone the database
+ * silently drops the document metadata too — including the storageKey that
+ * is the only way to find and delete the actual file. Without calling this
+ * first, deleting a visit orphans every document it ever had in the bucket
+ * forever, with no remaining record that they exist.
+ *
+ * Never throws on a storage failure: the caller (a user deleting their own
+ * visit, or an admin removing an account) must still be able to complete
+ * the database deletion even if the storage provider is temporarily
+ * unavailable. Failures are returned in `failedKeys` so the caller can
+ * decide how to surface them, instead of silently reporting success while
+ * leaving an orphaned object behind.
+ */
+export async function deleteDocumentsForVisits(
+  visitIds: number[]
+): Promise<{ objectsDeleted: number; failedKeys: string[] }> {
+  if (visitIds.length === 0) return { objectsDeleted: 0, failedKeys: [] };
+
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة حالياً.");
+
+  const docs = await db
+    .select({ storageKey: medicalDocuments.storageKey })
+    .from(medicalDocuments)
+    .where(inArray(medicalDocuments.visitId, visitIds));
+
+  let objectsDeleted = 0;
+  let failedKeys: string[] = [];
+
+  if (docs.length > 0) {
+    if (isStorageConfigured()) {
+      const result = await deleteObjects(docs.map((d) => d.storageKey));
+      objectsDeleted = result.deletedCount;
+      failedKeys = result.failedKeys;
+    } else {
+      // Storage was never configured (e.g. local dev) — there is nothing to
+      // delete from, but the caller must still know these keys were never
+      // actually cleaned up, in case storage is configured later.
+      console.error(
+        `[documents] Storage not configured — skipping R2 cleanup for ${docs.length} document(s) about to be removed from the database.`
+      );
+      failedKeys = docs.map((d) => d.storageKey);
+    }
+  }
+
+  // Explicit delete (not left to the visit's cascade) so the storage
+  // cleanup above always runs against a still-accurate set of rows, and so
+  // this function is self-contained and safe to call on its own.
+  await db.delete(medicalDocuments).where(inArray(medicalDocuments.visitId, visitIds));
+
+  return { objectsDeleted, failedKeys };
 }

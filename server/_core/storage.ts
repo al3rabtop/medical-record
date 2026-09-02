@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { GetObjectCommandOutput } from "@aws-sdk/client-s3";
 import { ENV } from "./env";
 
@@ -46,4 +46,45 @@ export async function getObjectStream(key: string): Promise<GetObjectCommandOutp
       Key: key,
     })
   );
+}
+
+/**
+ * Deletes a batch of objects by key. Never called with a client-supplied
+ * key — every caller resolves keys itself from ownership-checked database
+ * rows first. Chunked at 1000 keys (the S3/R2 DeleteObjects limit per
+ * request). Never throws: a failed key is reported back in `failedKeys`
+ * rather than aborting the whole batch or the caller's database cleanup,
+ * so a storage-provider hiccup can never silently pretend every file was
+ * removed, but also never traps a user's own delete action forever behind
+ * a transient storage failure.
+ */
+export async function deleteObjects(keys: string[]): Promise<{ deletedCount: number; failedKeys: string[] }> {
+  if (keys.length === 0) return { deletedCount: 0, failedKeys: [] };
+
+  const client = getClient();
+  const chunks: string[][] = [];
+  for (let i = 0; i < keys.length; i += 1000) chunks.push(keys.slice(i, i + 1000));
+
+  let deletedCount = 0;
+  const failedKeys: string[] = [];
+
+  for (const chunk of chunks) {
+    try {
+      const result = await client.send(
+        new DeleteObjectsCommand({
+          Bucket: ENV.s3.bucket,
+          Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: false },
+        })
+      );
+      deletedCount += result.Deleted?.length ?? 0;
+      for (const err of result.Errors ?? []) {
+        if (err.Key) failedKeys.push(err.Key);
+      }
+    } catch (err) {
+      console.error("[storage] Batch object deletion failed:", err);
+      failedKeys.push(...chunk);
+    }
+  }
+
+  return { deletedCount, failedKeys };
 }

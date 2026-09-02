@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { medicalResults, medicalVisits, profiles } from "../drizzle/schema";
 import { getDb } from "./db";
+import { deleteDocumentsForVisits } from "./documents";
 
 /** Lists an account's profiles, primary first, with record counts. */
 export async function listProfiles(userId: number) {
@@ -141,11 +142,15 @@ export async function deleteProfile(userId: number, profileId: number) {
     .from(medicalVisits)
     .where(eq(medicalVisits.profileId, profileId));
 
+  // Storage cleanup MUST happen before the visit rows are deleted — see
+  // deleteDocumentsForVisits for why the ordering matters.
+  const { failedKeys } = await deleteDocumentsForVisits(visits.map((v) => v.id));
+
   for (const v of visits) {
     await db.delete(medicalResults).where(eq(medicalResults.visitId, v.id));
   }
   await db.delete(medicalVisits).where(eq(medicalVisits.profileId, profileId));
   await db.delete(profiles).where(eq(profiles.id, profileId));
 
-  return { deleted: true, visitsRemoved: visits.length };
+  return { deleted: true, visitsRemoved: visits.length, storageCleanupFailed: failedKeys.length > 0 };
 }

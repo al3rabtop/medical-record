@@ -164,6 +164,21 @@ function latinTokens(s: string): string[] {
   return s.match(/[A-Za-z][A-Za-z0-9/]{1,}/g) ?? [];
 }
 
+/**
+ * The canonical Arabic display name for a test — its first Arabic-script
+ * alias, which is the spelling this alias table already treats as the
+ * "main" one it's built around (see the file header comment). Several
+ * codes deliberately have no Arabic alias at all (e.g. egfr, inr, aptt,
+ * cea — kept separate for unit reasons or genuinely only ever seen in
+ * English/Latin form on a report), in which case this returns null rather
+ * than inventing one.
+ */
+export function getCanonicalArabicName(code: string): string | null {
+  const aliases = ALIAS_GROUPS[code];
+  if (!aliases) return null;
+  return aliases.find((alias) => /[؀-ۿ]/.test(alias)) ?? null;
+}
+
 export type TestCodeResolution = {
   code: string;
   /** True when this matched a known alias; false when it's a generated fallback slug. */
